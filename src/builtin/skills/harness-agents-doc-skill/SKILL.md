@@ -1,3 +1,8 @@
+---
+name: harness-agents-doc-skill
+description: Generate final AGENTS.md based on templates and tmp facts, ensuring it is executable, reviewable, and maintainable.
+---
+
 # harness-agents-doc-skill
 
 ## 目标

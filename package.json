@@ -6,8 +6,12 @@
   "main": "dist/index.js",
   "scripts": {
     "build": "bun build src/index.ts --outdir dist --target bun --format esm && mkdir -p dist/builtin && cp -R src/builtin/agents dist/builtin/ && cp -R src/builtin/skills dist/builtin/ && cp -R src/builtin/templates dist/builtin/",
+    "build:claude": "bun run scripts/build-claude.ts",
     "test": "bun test",
     "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "gray-matter": "^4.0.3"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",

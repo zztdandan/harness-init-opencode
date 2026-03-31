@@ -1,3 +1,8 @@
+---
+name: harness-env-skill
+description: Detect available environment tools (Python, JavaScript, Shell) and generate structured records for AGENTS.md generation.
+---
+
 # harness-env-skill
 
 ## 目标

@@ -1,3 +1,8 @@
+---
+name: harness-repo-skill
+description: Setup main project integration and repository topology, output structured workspace for agent handoff.
+---
+
 # harness-repo-skill
 
 ## 目标
