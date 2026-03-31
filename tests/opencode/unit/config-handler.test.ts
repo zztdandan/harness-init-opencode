@@ -1,4 +1,7 @@
 import { describe, expect, test } from "bun:test"
+import { mkdtemp, rm, writeFile } from "node:fs/promises"
+import { join } from "node:path"
+import { tmpdir } from "node:os"
 
 import {
   HARNESS_INIT_AGENT,
@@ -7,27 +10,62 @@ import {
 
 describe("createConfigHandler", () => {
   test("injects skills path, agent, and permissions", async () => {
+    const tempDir = await mkdtemp(join(tmpdir(), "harness-agent-"))
+    const agentPath = join(tempDir, "harness-init.md")
+    await writeFile(
+      agentPath,
+      `---
+description: Harness init agent loaded from frontmatter
+mode: primary
+---
+
+# harness-init
+
+Gate A
+`,
+      "utf8",
+    )
+
     const handle = createConfigHandler({
       builtinSkillsDir: "/plugin/skills",
-      builtinAgentPath: "/plugin/agents/harness-init.md",
+      builtinAgentPath: agentPath,
     })
 
     const next = await handle({})
 
-    expect(next.skills.paths).toEqual(["/plugin/skills"])
-    expect(next.agent[HARNESS_INIT_AGENT].mode).toBe("primary")
-    expect(next.agent[HARNESS_INIT_AGENT].prompt).toBe(
-      "/plugin/agents/harness-init.md",
-    )
-    expect(next.permission.skill["harness-env-skill"]).toBe("allow")
-    expect(next.permission.skill["harness-repo-skill"]).toBe("allow")
-    expect(next.permission.skill["harness-agents-doc-skill"]).toBe("allow")
+    try {
+      expect(next.skills.paths).toEqual(["/plugin/skills"])
+      expect(next.agent[HARNESS_INIT_AGENT].mode).toBe("primary")
+      expect(next.agent[HARNESS_INIT_AGENT].description).toBe(
+        "Harness init agent loaded from frontmatter",
+      )
+      expect(next.agent[HARNESS_INIT_AGENT].prompt).toContain("Gate A")
+      expect(next.permission.skill["harness-env-skill"]).toBe("allow")
+      expect(next.permission.skill["harness-repo-skill"]).toBe("allow")
+      expect(next.permission.skill["harness-agents-doc-skill"]).toBe("allow")
+    } finally {
+      await rm(tempDir, { recursive: true, force: true })
+    }
   })
 
   test("keeps existing user config and stays idempotent", async () => {
+    const tempDir = await mkdtemp(join(tmpdir(), "harness-agent-"))
+    const agentPath = join(tempDir, "harness-init.md")
+    await writeFile(
+      agentPath,
+      `---
+description: Harness init agent
+mode: primary
+---
+
+Prompt body.
+`,
+      "utf8",
+    )
+
     const handle = createConfigHandler({
       builtinSkillsDir: "/plugin/skills",
-      builtinAgentPath: "/plugin/agents/harness-init.md",
+      builtinAgentPath: agentPath,
     })
 
     const original = {
@@ -45,21 +83,77 @@ describe("createConfigHandler", () => {
     const once = await handle(original)
     const twice = await handle(once)
 
-    expect(twice.skills.paths).toEqual(["/user/skills", "/plugin/skills"])
-    expect(twice.agent.existing.description).toBe("existing")
-    expect(twice.permission.skill["user-skill"]).toBe("allow")
+    try {
+      expect(twice.skills.paths).toEqual(["/user/skills", "/plugin/skills"])
+      expect(twice.agent.existing.description).toBe("existing")
+      expect(twice.permission.skill["user-skill"]).toBe("allow")
+    } finally {
+      await rm(tempDir, { recursive: true, force: true })
+    }
   })
 
   test("does not force default agent", async () => {
+    const tempDir = await mkdtemp(join(tmpdir(), "harness-agent-"))
+    const agentPath = join(tempDir, "harness-init.md")
+    await writeFile(
+      agentPath,
+      `---
+description: Harness init agent
+mode: primary
+---
+
+Prompt body.
+`,
+      "utf8",
+    )
+
     const handle = createConfigHandler({
       builtinSkillsDir: "/plugin/skills",
-      builtinAgentPath: "/plugin/agents/harness-init.md",
+      builtinAgentPath: agentPath,
     })
 
     const next = await handle({
       defaultAgent: "general",
     })
 
-    expect(next.defaultAgent).toBe("general")
+    try {
+      expect(next.defaultAgent).toBe("general")
+    } finally {
+      await rm(tempDir, { recursive: true, force: true })
+    }
+  })
+
+  test("parses fallback-compatible frontmatter for agent prompt", async () => {
+    const tempDir = await mkdtemp(join(tmpdir(), "harness-agent-"))
+    const agentPath = join(tempDir, "harness-init.md")
+    await writeFile(
+      agentPath,
+      `---
+description: Harness: init workspace with guarded gates
+mode: primary
+---
+
+Fallback parsing prompt body.
+`,
+      "utf8",
+    )
+
+    const handle = createConfigHandler({
+      builtinSkillsDir: "/plugin/skills",
+      builtinAgentPath: agentPath,
+    })
+
+    const next = await handle({})
+
+    try {
+      expect(next.agent[HARNESS_INIT_AGENT].description).toBe(
+        "Harness: init workspace with guarded gates",
+      )
+      expect(next.agent[HARNESS_INIT_AGENT].prompt).toBe(
+        "Fallback parsing prompt body.",
+      )
+    } finally {
+      await rm(tempDir, { recursive: true, force: true })
+    }
   })
 })
