@@ -71,13 +71,32 @@ bun run build
 - `src/builtin/agents/harness-init.md`：主编排 agent 提示词
 - `src/builtin/skills/*`：内置技能文档
 - `src/builtin/templates/AGENTS.template.md`：AGENTS 写作模板（提示模板，不是渲染脚本）
-- `tests/*`：行为与内容约束测试
+- `tests/opencode/unit/*`：单元与内容约束测试
+- `tests/opencode/e2e/*`：OpenCode CLI 黑盒测试（dist 挂载）
+- `tests/claude/e2e/*`：为后续 Claude E2E 预留
 
 ## Development commands
 
 - `bun test`：运行测试
 - `bun run typecheck`：TypeScript 类型检查
 - `bun run build`：构建插件并打包内置资源
+
+### 运行 OpenCode dist E2E
+
+必需环境变量：
+
+- `OPENCODE_CLI`：固定版本的 opencode 可执行路径（建议在 CI 显式配置）
+
+可选环境变量：
+
+- `E2E_ALLOW_CLI_FALLBACK=1`：允许在未设置 `OPENCODE_CLI` 时回退到 `opencode`
+- `E2E_KEEP_WORKSPACE=1`：失败或成功后保留 `tests/opencode/e2e/workspaces/<case-id>` 现场
+
+示例：
+
+```bash
+OPENCODE_CLI=/ABSOLUTE/PATH/TO/opencode bun test tests/opencode/e2e/opencode-dist-load.test.ts --timeout 180000
+```
 
 ## Notes
 

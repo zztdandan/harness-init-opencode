@@ -1,0 +1,6 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "plugin": [
+    "file:///home/base/repo/dedge/dedge-harness-init-guide/.worktrees/opencode-dist-e2e/dist/index.js"
+  ]
+}
