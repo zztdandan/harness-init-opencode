@@ -77,6 +77,22 @@
 
 最终稳态以 uv-first 为目标，venv/pure python 仅作为 bootstrap 兼容路径。
 
+### 3.2 会话启动一次性环境校验（每轮对话一次）
+
+每轮对话启动时，仅执行一次以下步骤：
+
+1. 执行环境校验脚本（输出当前事实）：
+   - `bash scripts/check-agent-env.sh`
+2. 若存在环境变量初始化脚本，则在当前 shell 中加载：
+   - `source scripts/init-agent-env.sh`
+
+约束：
+
+- `check-agent-env.sh` 负责输出，不承担 `source` 语义。
+- `init-agent-env.sh` 负责导出环境变量，不承担探测说明输出。
+- 脚本内容必须与最新环境探测结果一致（如 `uv` 命中、venv 路径、`PYTHONPATH` 约定）。
+- 若主管理项目为 Go 项目，可在该段落追加 Go 环境说明（版本、GOROOT/GOPATH/GOBIN 来源、工具链安装状态）。
+
 ## 4) Debug & E2E
 
 {debug_notes}
