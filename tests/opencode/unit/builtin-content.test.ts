@@ -19,15 +19,23 @@ describe("builtin prompt assets", () => {
   })
 
   test("includes required skills", () => {
-    const env = read("src/builtin/skills/harness-env-skill/SKILL.md")
-    const repo = read("src/builtin/skills/harness-repo-skill/SKILL.md")
-    const doc = read("src/builtin/skills/harness-agents-doc-skill/SKILL.md")
+    const env = read("src/builtin/skills/harness-agent-env/SKILL.md")
+    const repo = read("src/builtin/skills/harness-git-worktree/SKILL.md")
+    const doc = read("src/builtin/skills/harness-docs/SKILL.md")
+    const goRef = read(
+      "src/builtin/skills/harness-agent-env/reference/dedge-dev-env/SKILL.md",
+    )
 
     expect(env.includes("uv -> venv -> python")).toBe(true)
+    expect(env.includes("守则")).toBe(true)
+    expect(env.includes("reference/dedge-dev-env")).toBe(true)
     expect(repo.includes("submodule")).toBe(true)
     expect(repo.includes(".worktrees/")).toBe(true)
+    expect(repo.includes("管理")).toBe(true)
     expect(doc.includes("MUSTDO")).toBe(true)
     expect(doc.includes("Project Tree & Task Status")).toBe(true)
+    expect(goRef.includes("switch_go120.sh")).toBe(true)
+    expect(goRef.includes("install_go124_tools.sh")).toBe(true)
   })
 
   test("includes AGENTS template with mandatory sections", () => {
@@ -37,8 +45,11 @@ describe("builtin prompt assets", () => {
     expect(content.includes("Git Topology")).toBe(true)
     expect(content.includes(".worktrees/")).toBe(true)
     expect(content.includes("Bootstrap phase vs steady state")).toBe(true)
+    expect(content.includes("会话启动一次性环境校验")).toBe(true)
     expect(content.includes("UV_PROJECT_ENVIRONMENT")).toBe(true)
     expect(content.includes("source .venv/bin/activate")).toBe(true)
+    expect(content.includes("scripts/check-agent-env.sh")).toBe(true)
+    expect(content.includes("scripts/init-agent-env.sh")).toBe(true)
     expect(content.includes("由 agent 根据探测结果决定")).toBe(true)
     expect(content.includes("各库能力分配与修改模式")).toBe(true)
     expect(content.includes("主库")).toBe(true)

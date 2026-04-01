@@ -40,9 +40,9 @@ Gate A
         "Harness init agent loaded from frontmatter",
       )
       expect(next.agent[HARNESS_INIT_AGENT].prompt).toContain("Gate A")
-      expect(next.permission.skill["harness-env-skill"]).toBe("allow")
-      expect(next.permission.skill["harness-repo-skill"]).toBe("allow")
-      expect(next.permission.skill["harness-agents-doc-skill"]).toBe("allow")
+      expect(next.permission.skill["harness-agent-env"]).toBe("allow")
+      expect(next.permission.skill["harness-git-worktree"]).toBe("allow")
+      expect(next.permission.skill["harness-docs"]).toBe("allow")
     } finally {
       await rm(tempDir, { recursive: true, force: true })
     }

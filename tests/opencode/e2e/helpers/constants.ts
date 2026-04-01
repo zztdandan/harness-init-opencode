@@ -7,9 +7,9 @@ export const DEBUG_TIMEOUT_MS = 30_000
 
 export const REQUIRED_AGENT = "harness-init"
 export const REQUIRED_SKILLS = [
-  "harness-env-skill",
-  "harness-repo-skill",
-  "harness-agents-doc-skill",
+  "harness-agent-env",
+  "harness-git-worktree",
+  "harness-docs",
 ] as const
 
 export const ENV_OPENCODE_CLI = "OPENCODE_CLI"

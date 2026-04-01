@@ -31,9 +31,9 @@ import { cleanupWorkspace, prepareWorkspace } from "./helpers/workspace"
 describe("opencode dist e2e helpers", () => {
   test("declares required skill contract", () => {
     expect(REQUIRED_SKILLS).toEqual([
-      "harness-env-skill",
-      "harness-repo-skill",
-      "harness-agents-doc-skill",
+      "harness-agent-env",
+      "harness-git-worktree",
+      "harness-docs",
     ])
   })
 
@@ -74,7 +74,7 @@ describe("opencode dist e2e helpers", () => {
 
     expect(() =>
       assertRequiredSkillsFromDist(
-        [{ name: "harness-env-skill", location: "file:///tmp/skill.md" }],
+        [{ name: "harness-agent-env", location: "file:///tmp/skill.md" }],
         REQUIRED_SKILLS,
         skillPrefix,
       ),

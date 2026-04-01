@@ -5,9 +5,9 @@ import matter from "gray-matter"
 export const HARNESS_INIT_AGENT = "harness-init"
 
 const INJECTED_SKILLS = [
-  "harness-env-skill",
-  "harness-repo-skill",
-  "harness-agents-doc-skill",
+  "harness-agent-env",
+  "harness-git-worktree",
+  "harness-docs",
 ] as const
 
 type LooseConfig = Record<string, any>
@@ -25,7 +25,7 @@ type ParsedAgentPrompt = {
   prompt: string
 }
 
-const DEFAULT_AGENT_DESCRIPTION = "Harness workspace initializer orchestrator"
+const DEFAULT_AGENT_DESCRIPTION = "Harness workspace initializer and manager orchestrator"
 const DEFAULT_AGENT_MODE: AgentMode = "primary"
 
 function cloneConfig<T>(input: T): T {
