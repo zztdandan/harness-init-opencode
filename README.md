@@ -1,13 +1,15 @@
 # dedge-harness-init-guide
 
-一个标准 OpenCode 插件项目：注入 `agent + skills`，提供 harness 初始化主 agent，用于从 0 构建可交接的 agent 工作区。
+一个双平台插件项目：支持 **OpenCode** 和 **Claude** 两种加载方式，注入 `agent + skills`，提供 harness 初始化主 agent，用于从 0 构建可交接的 agent 工作区。
 
 ## What this plugin does
 
-- 运行时注入主 agent（`harness-init`），不改写用户 `opencode.json`
+- 运行时注入主 agent（`harness-init`），不改写用户配置
 - 注入内置 skills（环境探测、仓库组织、AGENTS.md 编写）
 - 默认不抢占用户常规会话（仅注册，不设默认 agent）
-- 支持源码加载与 dist 加载两种接入方式
+- **双平台支持**：
+  - OpenCode: 通过 config hook 动态注入
+  - Claude: 通过 marketplace.json 声明式加载
 
 ## Plugin capabilities
 
@@ -18,19 +20,21 @@
 
 ## Quick start
 
-### 1) 安装依赖
+### OpenCode 插件
+
+#### 1) 安装依赖
 
 ```bash
 bun install
 ```
 
-### 2) 构建插件（用于 dist 加载）
+#### 2) 构建插件
 
 ```bash
 bun run build
 ```
 
-### 3) 在 OpenCode 配置插件路径
+#### 3) 在 OpenCode 配置插件路径
 
 `opencode.json` 示例：
 
@@ -41,6 +45,29 @@ bun run build
   ]
 }
 ```
+
+### Claude 插件
+
+#### 1) 构建 Claude 插件
+
+```bash
+bun run build:claude
+```
+
+#### 2) 链接到 Claude
+
+```bash
+ln -s $(pwd)/dist-claude ~/.claude/skills/harness-init-plugin
+```
+
+#### 3) 使用
+
+在 Claude 对话中调用：
+```
+/harness-init
+```
+
+详细说明见 [CLAUDE_PLUGIN.md](./CLAUDE_PLUGIN.md)
 
 ## Loading modes
 
@@ -63,6 +90,64 @@ bun run build
   ]
 }
 ```
+
+## 挂载成功自检（推荐）
+
+以下自检步骤只读，不会初始化目录。
+
+### 1) 看解析后的配置是否包含本插件
+
+```bash
+opencode debug config
+```
+
+重点检查：
+
+- `plugin` 数组里包含 `file:///.../dedge-harness-init-guide/dist/index.js`
+- `agent.harness-init` 已注入
+- `skills.paths` 包含 `.../dist/builtin/skills`
+- `permission.skill` 包含：`harness-agent-env`、`harness-git-worktree`、`harness-docs`
+
+### 2) 看启动日志是否实际加载插件
+
+```bash
+opencode debug config --print-logs --log-level DEBUG
+```
+
+重点检查日志中是否出现：
+
+- `service=plugin path=file:///.../dedge-harness-init-guide/dist/index.js loading plugin`
+
+出现该行通常可判定插件已被 runtime 成功加载。
+
+### 3) 快速查看注入 agent 详情
+
+```bash
+opencode debug agent harness-init
+```
+
+若能看到 `prompt` 指向 `.../dist/builtin/agents/harness-init.md`，说明 agent 注入生效。
+
+### 4) 安全提示
+
+- `opencode debug config` 输出可能包含 provider 的 `apiKey`，请勿将完整输出直接贴到公开渠道。
+
+## 已知问题：sourceinstall 版本的 `@opencode-ai/plugin` 依赖告警
+
+在某些 sourceinstall 版本下，可能看到类似日志：
+
+- `No version matching "0.0.0-sourceinstall-..." found for specifier "@opencode-ai/plugin"`
+
+这通常是 OpenCode 在安装 `.opencode/package.json` 依赖时，将 `@opencode-ai/plugin` 锁到当前二进制版本号（例如 `0.0.0-sourceinstall-*`），而该版本并未发布到 npm registry 导致。
+
+影响评估：
+
+- 该告警默认是 `warn`，不阻断 file URL 插件加载。
+- 若你的 `debug config` 结果已包含本插件注入项（见上文自检项），可判定挂载仍然成功。
+
+建议修复（OpenCode 侧）：
+
+- 对 `0.0.0-*` 或 preview/sourceinstall 构建，安装 `@opencode-ai/plugin` 时使用 `*`/`latest`，不要使用不可发布的精确版本号。
 
 ## Project layout
 
