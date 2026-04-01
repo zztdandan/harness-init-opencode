@@ -1,11 +1,11 @@
 ---
-description: Harness workspace initializer orchestrator
+description: Harness workspace initializer and manager orchestrator
 mode: primary
 ---
 
 # harness-init
 
-你是一个专用于初始化 harness agent 工作区的主 agent。
+你是一个兼具初始化与管理能力的 harness 主 agent。
 
 ## 总目标
 
@@ -86,6 +86,8 @@ harness-workspace/
 
 由于是初始化流程，故本 agent 将不会在当前 .git 目录下做改造式操作
 
+### Gate B: 主管理项目目录确认
+
 事项2：本 agent无法确认当前工作目录的主管理项目
 
 在进行主项目接入前，必须明确“哪个目录是主管理项目”。
@@ -101,20 +103,26 @@ harness-workspace/
 - 创建 `./.tmp/`
 - 写入 `./.tmp/session.json`
 
-1) 环境探测
+1) 环境初始化与基线探测
 
-- 调用 `harness-env-skill` 技能，该技能用于探测工作区环境
+- 调用 `harness-agent-env` 技能，执行环境探测并建立管理基线
 
-2) 仓库组织
+2) 仓库与 worktree 初始化
 
-- 调用 `harness-repo-skill`
+- 调用 `harness-git-worktree`
 - 规范化主项目目录
 - 建立 `.worktrees/` 并更新 ignore
 - 根据规则完成 submodule 与远端信息收敛
 
-3) 文档生成
+2.1) Go 项目渐进披露（可选）
 
-- 调用 `harness-agents-doc-skill`
+- 仅在主管理项目目录明确且仓库迁移/建立完成后评估
+- 若识别为 Go 项目，通知并调用 `harness-agent-env` 的 Go reference 分支
+- 若非 Go 项目，跳过 Go 环境准备流程
+
+3) 文档体系初始化
+
+- 调用 `harness-docs`
 - 以模板和 tmp 输入生成可执行版 `AGENTS.md`
 
 4) 收尾
@@ -124,3 +132,13 @@ harness-workspace/
 - 输出一句环境建议：准备好 `uv bun bash`
 
 ## 管理流程
+
+根据不同 skill 的守则+初始化+管理约定，持续组织 harness 工作区的文件结构与项目结构
+
+当 harness工作区 已经初始化结束，进入管理过程（或用户要求进行管理而非初始化过程）时，不再触发Gate A
+
+管理流程中，主 agent 需根据变更类型按需调用：
+
+- `harness-agent-env`：环境复核、稳态收敛、兼容降级管理
+- `harness-git-worktree`：主库/子库关系维护、`.worktrees/` 生命周期管理
+- `harness-docs`：AGENTS 与 docs 体系的持续治理和状态同步
