@@ -1,197 +1,157 @@
 ---
 name: harness-agent-env
-description: Initialize and manage runtime environment for harness agent workspaces. Use this skill when setting up a new harness workspace, detecting Python/JavaScript/Shell/Go toolchains, creating environment baseline scripts (check-agent-env.sh, init-agent-env.sh), troubleshooting environment issues, or when user mentions "agent environment", "runtime setup", "environment detection", "uv", "venv", "bun", "Go toolchain", or asks to prepare development environment for agents.
+description: Initialize and continuously manage harness workspace runtime bootstrap assets. Use this skill whenever user mentions agent environment/runtime setup, session bootstrap, check-agent-env.sh, init-agent-env.sh, AGENTS.md session start checks, uv/venv/bun/node/zsh/bash detection, Go 1.20/1.24 environment prep, or asks to make every conversation runnable even without reloading this skill. Always use this skill for both first-time setup and later cleanup/normalization of existing projects.
 ---
 
 # harness-agent-env
 
+## 核心目标（必须贯彻）
+
+本技能负责维护两类“可持续生效”的资产，确保后续对话即使不重新加载本技能，也能完成环境准备：
+
+1. `scripts/init-agent-env.sh` + `scripts/check-agent-env.sh`
+2. `AGENTS.md` 中“会话启动一次性环境校验”固定段落
+
+### 会话启动顺序（强约束）
+
+每轮对话启动时只执行一次，顺序必须是：
+
+1. `source scripts/init-agent-env.sh`
+2. `bash scripts/check-agent-env.sh`
+
+顺序不可反转。`init` 负责注入环境，`check` 负责基于已注入状态输出事实与建议。
+
+## 工作模式：初始化 vs 管理
+
+### 1) 初始化（从零开始）
+
+触发条件：脚本缺失、AGENTS.md 缺失固定段落、或用户明确要求首次建立环境基线。
+
+必须完成：
+
+1. 环境探测（Python → JavaScript → Shell → 其他可选）
+2. 生成/写入 `scripts/init-agent-env.sh` 与 `scripts/check-agent-env.sh`
+3. 在 `AGENTS.md` 注入固定启动段落
+4. 写入 `.tmp/env.json`（初始化阶段必须写）
+
+### 2) 管理（已有项目规整）
+
+触发条件：脚本已存在，需修复、收敛、补充信息、对齐规范。
+
+必须完成：
+
+1. 复核脚本与当前事实是否一致
+2. 增量修改脚本和 AGENTS.md 固定段落
+3. 是否写 `.tmp/env.json` 由模型判断（可写可不写），但若写入则必须与当前探测事实一致
+
 ## 执行规则
 
-1. **探测顺序固定**：必须按 Python → JavaScript → Shell → Go（可选）顺序探测，每步记录结果到 tmp/env.json
-2. **证据留存**：每次探测必须保存命令输出和版本信息，不得基于假设跳过探测
-3. **脚本幂等性**：生成的 check-agent-env.sh 和 init-agent-env.sh 必须可重复执行
-4. **缺失项处理**：工具缺失时记录到 missing 数组，给出安装建议，但不阻断流程
-5. **输出结构化**：所有探测结果写入 tmp/env.json，供其他技能和主 agent 复用
-6. **脚本约定**：在项目 scripts/ 目录维护环境脚本，每轮对话启动时仅执行一次
+1. **探测顺序固定**：Python → JavaScript → Shell → Go
+2. **证据留存**：保留探测命令与版本依据，禁止“猜测式”写入
+3. **幂等性**：`init/check` 可重复执行，不得因重复执行而污染环境
+4. **缺失项处理**：记录 missing 并给安装建议，不阻断整体流程
+5. **事实优先**：`check` 输出必须与当前已生效环境一致
 
-## 初始化
+## 基础环境探测规范
 
-1. 按顺序探测可用环境：
-   - Python：`uv -> venv -> python`
-   - JavaScript：`bun -> node`
-   - Shell：`zsh -> bash`
-2. 首次初始化必须写入 `tmp/env.json`，至少包含：探测顺序、命中结果、缺失项、最终建议。
-3. 若命中 `uv`，初始化建议以 uv-first 为目标；若未命中，记录降级路径与恢复计划。
-4. `venv_path` 由主 agent 在执行期决定并回写，不使用模板硬编码。
-5. 初始化后（或用户要求重新探测后）必须建立/更新管理基线脚本：
-   - `scripts/check-agent-env.sh`：只做环境校验与信息输出（可直接执行）
-   - `scripts/init-agent-env.sh`：只做环境变量初始化（用于 `source`）
-6. `check-agent-env.sh` 输出应与探测事实一致，至少包含：
-   - 当前已命中的环境工具链摘要（可覆盖 Python/JavaScript/Shell，但不要求一次性穷尽未来所有环境）
-   - 与当前命中项相关的关键路径与运行时信息（如 venv 路径、可执行路径、当前 shell）
-   - 本轮建议与稳态建议（例如“当前为 uv-first，建议保持 .venv”）
-7. `init-agent-env.sh` 仅放可 `source` 的导出逻辑，例如：
-   - Python 相关：`UV_PROJECT_ENVIRONMENT`、`PYTHONPATH`
-   - JavaScript/Node 相关：按需要导出 `PATH` 扩展、`BUN_INSTALL`、`NODE_OPTIONS`
-   - Shell/通用相关：按需要导出项目级运行变量
-   - 具体导出项由 agent 基于探测事实决定，禁止无依据硬编码
+按顺序探测：
 
-## Go 环境（可选探测）
+- Python：`uv -> venv -> python`
+- JavaScript：`bun -> node`
+- Shell：`zsh -> bash`
+
+生成脚本要求：
+
+- `scripts/init-agent-env.sh`：只放可 `source` 的初始化逻辑（变量导出、PATH 注入、必要的 source 调用）
+- `scripts/check-agent-env.sh`：只做状态校验与信息输出（可直接执行）
+
+`check` 至少输出：
+
+1. 各链路命中结果与版本
+2. 关键路径（如 venv、可执行路径、当前 shell）
+3. 本轮建议与稳态建议
+
+## Go 环境规范（可选规范）
 
 ### 触发条件
 
-Go 环境探测仅在以下条件同时满足时触发：
+满足任一条件即进入 Go 流程：
 
-1. 基础环境探测（Python → JavaScript → Shell）已完成
-2. 主管理项目（harness workspace 管理的项目）是 Go 项目
-3. scripts/ 目录已创建
+1. 主管理项目是 Go 项目（依据主管理项目 `go.mod`/`go.sum` 或主 agent 明确说明）
+2. 用户明确要求准备 Go 1.20/1.24 环境
 
-判断方法：读取 harness 工作区配置或由主 agent 明确告知主管理项目语言类型。**不是**检查当前harness 工作区目录的 go.mod/go.sum，而是检查主管理项目的 go.mod/go.sum。
+注意：判定对象是“主管理项目”，不是 harness 管理仓自身目录。
 
-### Go 路径配置策略
+### Go 版本与路径决策
 
-按以下优先级获取 Go 环境路径：
+按优先级：
 
-1. **优先询问用户**（首次配置时）：
-   - 项目使用的 Go 版本（1.20 或 1.24）
-   - GOROOT 路径
-   - GOPATH 路径
-   - GOBIN 路径
-   - Go 私有模块设置（GOPRIVATE/GONOPROXY/GONOSUMDB）
-   - Go module cache 位置（GOMODCACHE）
+1. 用户明确提供（版本、GOROOT/GOPATH/GOBIN、私有模块配置、GOMODCACHE）
+2. 默认路径（1.20 对应 `/home/base/.gvm/gos/go1.20.14`，1.24 对应 `/home/base/.gvm/gos/go1.24.1`）
+3. `go env`/PATH 发现（作为兜底事实来源）
 
-2. **默认位置探测**（用户未提供时）：
-   - Go 1.20 GOROOT: `/home/base/.gvm/gos/go1.20.14`
-   - Go 1.24 GOROOT: `/home/base/.gvm/gos/go1.24.1`
-   - GOPATH: `/home/base/repo/go120_mod` 或 `/home/base/repo/go124_mod`
-   - GOBIN: `${GOPATH}/bin`
+### Go 初始化落地要求（强约束）
 
-3. **环境变量回退**（默认位置不存在时）：
-   ```bash
-   go version  # 检查对应版本
-   go env GOROOT GOPATH GOBIN GOMODCACHE
-   ```
+当 Go 版本已经明确（1.20 或 1.24）后，`init-agent-env.sh` 必须包含“真实初始化动作”，禁止仅做 no-op 回填。
 
-4. **系统无 Go 时**：进入 Go 安装流程
+允许两种实现方式（二选一）：
 
-### Go 流程规则
+1. **推荐方式：调用 reference 脚本**
+   - 将 `switch_go120.sh` / `switch_go124.sh`（及依赖 `go_env_common.sh`）拷贝到项目 `scripts/`，或通过稳定相对路径直接引用 reference
+   - 在 `init-agent-env.sh` 中使用 `source` 调用对应 `switch_*` 脚本
+2. **内联方式：融入等价逻辑**
+   - 仅当无法稳定引用脚本时，才可将 switch 的等价逻辑内联到 `init-agent-env.sh`
+   - 逻辑必须等价于 reference 的真实切换行为（设置 GOROOT/GOPATH/GOBIN、PATH、GOPRIVATE 等）
 
-1. 在初始化/维护阶段，先执行 Go 环境探查，再决定是否安装或调整
-2. `scripts/check-agent-env.sh` 与 `scripts/init-agent-env.sh` 作为统一入口：
-   - 前者负责汇总并输出 Go 环境状态
-   - 后者负责 `source` Go 相关环境变量
-   - 二者可调取 reference 脚本，不重复实现同类逻辑
-3. 对于 reference 中已提供的脚本（switch/install），按其语义调用：
-   - `switch_*` 必须 `source`
-   - `install_*` 使用 `bash`
-4. 若未发现可用 Go 环境，则进入 Go 环境安装流程；若已存在 Go，则按版本选择对应工具安装脚本
-5. 安装/调整动作仅在初始化或维护阶段触发；日常会话启动只运行两条统一脚本做校验、输出与变量注入，不重复安装
+禁止行为：
 
-### Reference 文档
+- 明确 Go 版本后，仅执行 `export GOROOT="$(go env GOROOT)"` 这类“读当前值再写回”的伪初始化
+- 把 Go 初始化退化成纯信息输出
 
-Go 环境脚本和详细说明位于：`reference/dedge-dev-env/GO_ENV_REFERENCE.md`
-- 该文档提供 Go 1.20/1.24 环境切换脚本的使用说明
-- 仅在 Go 项目初始化时读取此文档
-- 非 Go 项目不进入 Go 环境准备流程，只保留基础环境检查
+### switch/install 语义
 
-## 管理
+- `switch_*` 必须通过 `source` 执行
+- `install_*` 必须通过 `bash` 执行
 
-### 脚本维护目标
+### Go 状态输出要求（check）
 
-本技能的核心目标是生成并维护两个脚本：
+Go 项目时，`check-agent-env.sh` 必须额外输出：
 
-1. **scripts/check-agent-env.sh**：环境校验与信息输出（可直接执行）
-2. **scripts/init-agent-env.sh**：环境变量初始化（用于 `source`）
+1. 当前 Go 版本与命中链路
+2. GOROOT/GOPATH/GOBIN/GOMODCACHE
+3. GOPRIVATE/GONOPROXY/GONOSUMDB
+4. 初始化来源（`user_provided` / `default` / `go_env` / `installed`）
+5. 是否通过 `switch_*` 或等价内联逻辑完成初始化
 
-这两个脚本使得 agent 在每轮对话启动时无需重新加载本技能，仅通过执行脚本即可完成环境确认与初始化。
+## AGENTS.md 集成（固定段落）
 
-### 脚本内容要求
-
-**check-agent-env.sh** 必须输出：
-- 当前已命中的环境工具链摘要（Python/JavaScript/Shell，Go 项目时包含 Go）
-- 关键路径与运行时信息（如 venv 路径、可执行路径、当前 shell）
-- 本轮建议与稳态建议（例如"当前为 uv-first，建议保持 .venv"）
-- Go 项目时：Go 版本、GOROOT/GOPATH/GOBIN、路径来源（用户提供/默认/go env）、工具链安装状态
-
-**init-agent-env.sh** 仅放可 `source` 的导出逻辑：
-- Python 相关：`UV_PROJECT_ENVIRONMENT`、`PYTHONPATH`
-- JavaScript/Node 相关：按需导出 `PATH` 扩展、`BUN_INSTALL`、`NODE_OPTIONS`
-- Go 相关（Go 项目时）：`GOROOT`、`GOPATH`、`GOBIN`、`GOPRIVATE`、`GOMODCACHE` 等
-- 具体导出项由 agent 基于探测事实决定，禁止无依据硬编码
-
-### 增量维护
-
-1. 环境变化（新增工具、版本迁移、路径变更）需更新 `tmp/env.json` 和两个脚本
-2. 持续推动稳态：优先收敛到 `uv + .venv`、`bun`、`bash/zsh` 的可维护组合
-3. 当环境现状与既有规范冲突时，先报告差异，再给出最小影响修复建议
-4. 每次重检后同步更新脚本，保证脚本输出与当前事实一致
-
-### AGENTS.md 集成
-
-在 AGENTS.md 的 Python Environment 章节添加固定段落（参考 AGENTS.template.md）：
+必须维护以下段落（允许小幅文案差异，但顺序不可变）：
 
 ```markdown
 ### 会话启动一次性环境校验（每轮对话一次）
 
 每轮对话启动时，仅执行一次以下步骤：
 
-1. 执行环境校验脚本：`bash scripts/check-agent-env.sh`
-2. 加载环境变量：`source scripts/init-agent-env.sh`
+1. 加载环境变量：`source scripts/init-agent-env.sh`
+2. 执行环境校验脚本：`bash scripts/check-agent-env.sh`
 
 若脚本不存在或执行失败，使用 harness-agent-env 技能管理。
 ```
 
-此段落使得后续对话无需重新加载本技能，直接通过脚本完成环境初始化。
+## 输出结构（.tmp/env.json）
 
-## 输出格式
+初始化阶段必须写入 `.tmp/env.json`，管理阶段按需写入。结构至少包含：
 
-tmp/env.json 完整示例：
+- 探测顺序与命中结果
+- missing 列表
+- Go（若触发）版本/路径/来源
+- `scripts.check` 与 `scripts.init` 路径
+- `phase`（bootstrap/manage）
+- `final_recommendation`
+- `timestamp`
 
-```json
-{
-  "python": {
-    "order": ["uv", "venv", "python"],
-    "selected": "uv",
-    "missing": [],
-    "venv_path": "/path/to/project/.venv",
-    "version": "3.11.0",
-    "uv_version": "0.1.0"
-  },
-  "js": {
-    "order": ["bun", "node"],
-    "selected": "bun",
-    "missing": [],
-    "version": "1.0.0",
-    "path": "/usr/local/bin/bun"
-  },
-  "shell": {
-    "order": ["zsh", "bash"],
-    "selected": "bash",
-    "missing": ["zsh"],
-    "current": "/bin/bash",
-    "version": "5.1.16"
-  },
-  "go": {
-    "detected": true,
-    "version": "1.24.1",
-    "goroot": "/home/base/.gvm/gos/go1.24.1",
-    "gopath": "/home/base/repo/go124_mod",
-    "gobin": "/home/base/repo/go124_mod/bin",
-    "goprivate": "gitlab-c7n.lgdxtech.com",
-    "gomodcache": "/home/base/repo/go124_mod/pkg/mod",
-    "source": "user_provided"
-  },
-  "scripts": {
-    "check": "scripts/check-agent-env.sh",
-    "init": "scripts/init-agent-env.sh"
-  },
-  "phase": "bootstrap",
-  "final_recommendation": "uv + .venv, bun, bash, Go 1.24",
-  "timestamp": "2026-04-01T08:40:07.982Z"
-}
-```
+`source` 字段可选值：`user_provided` / `default` / `go_env` / `installed`。
 
-字段说明：
-- `source` 可选值：`user_provided`（用户提供）、`default`（默认位置）、`go_env`（环境变量）、`installed`（新安装）
-- Go 部分仅在 Go 项目时出现
-- `venv_path` 由主 agent 在执行期决定并回写
+## 参考资料
+
+Go 相关脚本与说明位于：`reference/dedge-dev-env/GO_ENV_REFERENCE.md`。

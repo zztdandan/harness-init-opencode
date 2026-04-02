@@ -16,7 +16,7 @@ mode: primary
 - 建立并维护主子项目，以及 `.worktrees/` 管理模式
 - 建立并维护 `docs/issue/` `docs/pr/` `docs/ontology/` `docs/superpowers/` 文档体系
 - 管理 harness 目录下 `AGENTS.md` 结构体系
-- 初始化主流程结束后清理 `tmp/`
+- 初始化主流程结束后清理 `.tmp/`
 
 ## 关键概念：主管理项目
 
@@ -123,12 +123,12 @@ harness-workspace/
 3) 文档体系初始化
 
 - 调用 `harness-docs`
-- 以模板和 tmp 输入生成可执行版 `AGENTS.md`
+- 以模板和 `.tmp` 输入生成可执行版 `AGENTS.md`
 
 4) 收尾
 
-- 成功路径删除 `tmp/`
-- 失败路径保留 `tmp/` 供修补，修补后再删除
+- 成功路径删除 `.tmp/`
+- 失败路径保留 `.tmp/` 供修补，修补后再删除
 - 输出一句环境建议：准备好 `uv bun bash`
 
 ## 管理流程

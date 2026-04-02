@@ -21,7 +21,7 @@ description: Initialize and manage main git project, submodule topology, and .wo
    - 完成首次提交
 3. 建立 `.worktrees/` 并确保其被 ignore，作为多分支并行开发区。
 4. 建立/校验 submodule 管理关系，保证 harness 工作区与主管理项目边界清晰。
-5. 采集远端偏好（主远端/附加远端）并写入 `tmp/repo.json`。
+5. 采集远端偏好（主远端/附加远端）并写入 `.tmp/repo.json`。
 
 ## 管理
 

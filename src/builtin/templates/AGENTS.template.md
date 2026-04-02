@@ -40,13 +40,12 @@
 | 工作区 | 路径 | 用途 | 修改策略 |
 |--------|------|------|----------|
 | **主库** | `{main_project}/` | 日常功能迭代 | ✅ 主要开发库，所有稳定功能在此提交 |
-| **实验区** | `.worktrees/acp-impl/` | 临时特性开发与实验性改动 | ✅ 新特性验证、排畸测试、实验性代码 |
 | **临时库** | `.worktrees/<feature-xxx>/` | 特定功能开发 | ✅ 基于 main 新建 worktree，完成后可删除 |
 
 **工作流规则**：
 
 1. **主库开发**：`{main_project}/` 目录作为主要开发库，日常功能在此迭代
-2. **实验在 worktree**：新特性验证、排畸测试、实验性改动在 `.worktrees/acp-impl/` 中进行
+2. **实验在 worktree**：新特性验证、排畸测试、实验性改动在 `.worktrees/<feature-xxx>/` 中进行
 3. **稳定后合并**：实验区验证通过后，合并到主库 main 分支
 4. **排畸验证**：对上游仓库的兼容性测试在 worktree 中进行
 5. **贡献流程**：
@@ -55,29 +54,7 @@
    - 合并后删除临时 worktree
 6. **🚨 Worktree 摘出范围（强制）**：后续任何 worktree 摘出/导出操作，仅允许摘出工程子项目路径；禁止摘出整个超级项目，避免把文档、部署子库与其他子模块误带出。
 
-## 3) Python Environment & Tooling
-
-### 3.0 Bootstrap phase vs steady state
-
-- Bootstrap：允许按探测链路降级并记录事实（`uv -> venv -> python`）
-- Steady state：确认 `uv` 与 `.venv` 后，统一执行 uv-first 规范
-
-### 3.1 统一虚拟环境
-
-统一虚拟环境路径不是模板固定值，**由 agent 根据探测结果决定**，并写入最终 AGENTS.md。
-
-建议规则：
-
-1. 若选择 `uv`：
-   - 每个 session 开始时设置 `UV_PROJECT_ENVIRONMENT=.venv`
-   - 依赖管理使用 `uv sync` / `uv add`
-2. 若降级为 Python venv：
-   - 使用 `python -m venv .venv`
-   - 会话内执行 `source .venv/bin/activate`
-
-最终稳态以 uv-first 为目标，venv/pure python 仅作为 bootstrap 兼容路径。
-
-### 3.2 会话启动一次性环境校验（每轮对话一次）
+## 会话启动一次性环境校验（每轮对话一次）
 
 每轮对话启动时，仅执行一次以下步骤：
 
@@ -101,7 +78,7 @@
 
 根目录 `README.md` 作为项目手册，必须维护以下内容：
 
-### 5.1 必备章节
+### 5.1 README必备章节
 
 ```markdown
 # {workspace_name}

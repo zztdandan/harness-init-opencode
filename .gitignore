@@ -4,3 +4,4 @@ dist-claude/
 tmp/
 .DS_Store
 .worktrees/
+.opencode
