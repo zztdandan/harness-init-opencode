@@ -29,14 +29,15 @@ description: Initialize and manage AGENTS.md and harness documentation system wi
    - `🚨 Worktree 摘出范围（强制）` 规则
 5. 环境章节不再在 `harness-docs` 内重复定义探测细节；环境探测与脚本内容由 `harness-agent-env` 统一负责。
 6. `AGENTS.md` 仅保留会话启动的 env 入口说明：
-   - `bash scripts/check-agent-env.sh`
    - `source scripts/init-agent-env.sh`
+   - `bash scripts/check-agent-env.sh`
    其余 Python/JS/Shell/Go 探测细则以 `harness-agent-env` 的最新事实为准。
 7. 强制包含 MUSTDO 区块，且至少包含：
    - 代码注释需可 review、可读
    - 已有有价值注释不得随意删除
-8. 初始化输出必须写入 Gate A/Gate B 决策摘要、环境链路推荐与结构说明。
-9. 若模板与历史生成结果冲突，优先执行模板；遇到历史遗留章节（如拆分成两个独立 git 章节、重复环境说明）时，按模板合并并清理重复段落。
+8. 必须包含 `Project Tree & Task Status` 章节，并作为权威状态源维护。
+9. 初始化输出必须写入 Gate A/Gate B 决策摘要、环境链路推荐与结构说明。
+10. 若模板与历史生成结果冲突，优先执行模板；遇到历史遗留章节（如拆分成两个独立 git 章节、重复环境说明）时，按模板合并并清理重复段落。
 
 ## 管理
 

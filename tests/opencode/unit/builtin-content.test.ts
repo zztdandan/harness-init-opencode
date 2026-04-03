@@ -23,12 +23,20 @@ describe("builtin prompt assets", () => {
     const repo = read("src/builtin/skills/harness-git-worktree/SKILL.md")
     const doc = read("src/builtin/skills/harness-docs/SKILL.md")
     const goRef = read(
-      "src/builtin/skills/harness-agent-env/reference/dedge-dev-env/SKILL.md",
+      "src/builtin/skills/harness-agent-env/reference/go/GO_ENV_REFERENCE.md",
+    )
+    const mainOutputSpec = read(
+      "src/builtin/skills/harness-agent-env/reference/check-output/ENV_CHECK_OUTPUT_SPEC.md",
     )
 
     expect(env.includes("uv -> venv -> python")).toBe(true)
     expect(env.includes("守则")).toBe(true)
-    expect(env.includes("reference/dedge-dev-env")).toBe(true)
+    expect(env.includes("reference/go/GO_ENV_REFERENCE.md")).toBe(true)
+    expect(env.includes("reference/check-output/ENV_CHECK_OUTPUT_SPEC.md")).toBe(
+      true,
+    )
+    expect(env.includes("command")).toBe(true)
+    expect(mainOutputSpec.includes("stdout 必须为 TOML")).toBe(true)
     expect(repo.includes("submodule")).toBe(true)
     expect(repo.includes(".worktrees/")).toBe(true)
     expect(repo.includes("管理")).toBe(true)
@@ -36,6 +44,9 @@ describe("builtin prompt assets", () => {
     expect(doc.includes("Project Tree & Task Status")).toBe(true)
     expect(goRef.includes("switch_go120.sh")).toBe(true)
     expect(goRef.includes("install_go124_tools.sh")).toBe(true)
+    expect(goRef.includes("check-output/ENV_CHECK_OUTPUT_SPEC.md")).toBe(true)
+    expect(mainOutputSpec.includes("[python]")).toBe(true)
+    expect(mainOutputSpec.includes("\n[go]\n")).toBe(false)
   })
 
   test("includes AGENTS template with mandatory sections", () => {

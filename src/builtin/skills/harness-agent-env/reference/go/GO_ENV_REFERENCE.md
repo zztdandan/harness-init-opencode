@@ -1,6 +1,6 @@
 # Go 环境脚本参考文档
 
-本文档提供 Go 1.20 和 Go 1.24 环境切换与工具安装的脚本说明，供 `harness-agent-env` 技能在处理 Go 项目时参考使用。
+本文档提供 Go 1.20 和 Go 1.24 环境切换与工具安装的脚本说明，供 `harness-agent-env` 在初始化或重做 Go 环境时使用。
 
 这些脚本用于快速准备 dedge 开发环境，支持多版本 Go 切换和私有模块配置。
 
@@ -13,6 +13,14 @@
 - `scripts/install_go120_tools.sh`: 安装 Go 1.20 兼容工具
 - `scripts/install_go124_tools.sh`: 安装 Go 1.24 工具
 - `scripts/go_env_common.sh`: 共享的路径解析和环境设置工具函数
+
+## check 输出补充规范
+
+Go 启用时，`check-agent-env.sh` 的输出补充要求见：
+
+- `check-output/ENV_CHECK_OUTPUT_SPEC.md`
+
+该补充规范只在 Go 场景下生效，不应污染非 Go 基础输出约定。
 
 ## 路径配置策略
 
