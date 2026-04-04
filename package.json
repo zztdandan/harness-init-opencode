@@ -3,9 +3,9 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "main": "dist/index.js",
+  "main": "dist/harness_init.js",
   "scripts": {
-    "build": "bun build src/index.ts --outdir dist --target bun --format esm && mkdir -p dist/builtin && cp -R src/builtin/agents dist/builtin/ && cp -R src/builtin/skills dist/builtin/ && cp -R src/builtin/templates dist/builtin/",
+    "build": "bun build src/index.ts --outfile dist/harness_init.js --target bun --format esm && mkdir -p dist/builtin && cp -R src/builtin/agents dist/builtin/ && cp -R src/builtin/skills dist/builtin/ && cp -R src/builtin/templates dist/builtin/",
     "build:claude": "bun run scripts/build-claude.ts",
     "test": "bun test",
     "typecheck": "tsc --noEmit"

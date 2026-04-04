@@ -41,7 +41,7 @@ bun run build
 ```json
 {
   "plugin": [
-    "file:///ABSOLUTE/PATH/TO/dedge-harness-init-guide/dist/index.js"
+    "file:///ABSOLUTE/PATH/TO/dedge-harness-init-guide/dist/harness_init.js"
   ]
 }
 ```
@@ -86,7 +86,7 @@ ln -s $(pwd)/dist-claude ~/.claude/skills/harness-init-plugin
 ```json
 {
   "plugin": [
-    "file:///ABSOLUTE/PATH/TO/dedge-harness-init-guide/dist/index.js"
+    "file:///ABSOLUTE/PATH/TO/dedge-harness-init-guide/dist/harness_init.js"
   ]
 }
 ```
@@ -103,7 +103,7 @@ opencode debug config
 
 重点检查：
 
-- `plugin` 数组里包含 `file:///.../dedge-harness-init-guide/dist/index.js`
+- `plugin` 数组里包含 `file:///.../dedge-harness-init-guide/dist/harness_init.js`
 - `agent.harness-init` 已注入
 - `skills.paths` 包含 `.../dist/builtin/skills`
 - `permission.skill` 包含：`harness-agent-env`、`harness-git-worktree`、`harness-docs`
@@ -116,7 +116,7 @@ opencode debug config --print-logs --log-level DEBUG
 
 重点检查日志中是否出现：
 
-- `service=plugin path=file:///.../dedge-harness-init-guide/dist/index.js loading plugin`
+- `service=plugin path=file:///.../dedge-harness-init-guide/dist/harness_init.js loading plugin`
 
 出现该行通常可判定插件已被 runtime 成功加载。
 

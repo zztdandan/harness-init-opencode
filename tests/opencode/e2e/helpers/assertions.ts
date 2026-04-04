@@ -38,7 +38,7 @@ export function assertDebugSkillShape(skills: unknown): asserts skills is Array<
   }
 }
 
-export function assertDebugConfigHasPlugin(config: unknown, distIndexJsPath: string): void {
+export function assertDebugConfigHasPlugin(config: unknown, distPluginEntryPath: string): void {
   if (!config || typeof config !== "object") {
     throw new Error("debug config output must be a JSON object")
   }
@@ -62,8 +62,8 @@ export function assertDebugConfigHasPlugin(config: unknown, distIndexJsPath: str
 
   walk(config)
 
-  const needle = distIndexJsPath.replace(/\\/g, "/")
-  const found = strings.some((entry) => entry.replace(/\\/g, "/").includes("/dist/index.js") || entry.includes(needle))
+  const needle = distPluginEntryPath.replace(/\\/g, "/")
+  const found = strings.some((entry) => entry.replace(/\\/g, "/").includes("/dist/harness_init.js") || entry.includes(needle))
   if (!found) {
     throw new Error(`debug config does not include expected dist plugin mount: ${needle}`)
   }

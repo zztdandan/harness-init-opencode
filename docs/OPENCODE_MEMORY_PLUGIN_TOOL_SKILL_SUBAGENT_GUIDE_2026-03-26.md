@@ -19,7 +19,7 @@
 
 不必须。**编译与否都可以做到运行时注入**。
 
-- `oh-my-openagent`：通常走编译产物 `dist/index.js`。
+- `oh-my-openagent`：通常走编译产物 `dist/harness_init.js`。
 - `superpowers`：可以直接加载源码插件文件并在 `config` hook 注入。
 
 决定因素不是“编译不编译”，而是这两点：
@@ -41,7 +41,7 @@
 ```json
 {
   "plugin": [
-    "file:///ABSOLUTE/PATH/TO/your-plugin/dist/index.js"
+    "file:///ABSOLUTE/PATH/TO/your-plugin/dist/harness_init.js"
   ]
 }
 ```
@@ -125,7 +125,7 @@ your-plugin/
         build.md
         memory-operator.md
   dist/
-    index.js
+    harness_init.js
   package.json
   tsconfig.json
 ```
@@ -199,7 +199,7 @@ export function createConfigHandler() {
   "name": "private-memory-plugin",
   "private": true,
   "type": "module",
-  "main": "dist/index.js",
+  "main": "dist/harness_init.js",
   "scripts": {
     "build": "bun build src/index.ts --outdir dist --target bun --format esm",
     "typecheck": "tsc --noEmit"
@@ -219,7 +219,7 @@ bun run build
 ```json
 {
   "plugin": [
-    "file:///ABSOLUTE/PATH/TO/your-plugin/dist/index.js"
+    "file:///ABSOLUTE/PATH/TO/your-plugin/dist/harness_init.js"
   ]
 }
 ```
@@ -243,7 +243,7 @@ bun run build
 说明：
 
 1. 能否直接加载 TS 取决于当前 OpenCode 运行环境与加载器能力。
-2. 如果环境对 TS 直载不稳定，改回编译包 `dist/index.js`。
+2. 如果环境对 TS 直载不稳定，改回编译包 `dist/harness_init.js`。
 3. 源码加载同样可以运行时注入，不影响“一次性加载”机制。
 
 ---
@@ -257,7 +257,7 @@ bun run build
 ```json
 {
   "plugin": [
-    "file:///ABSOLUTE/PATH/TO/your-plugin/dist/index.js"
+    "file:///ABSOLUTE/PATH/TO/your-plugin/dist/harness_init.js"
   ]
 }
 ```
@@ -269,7 +269,7 @@ bun run build
 ```json
 {
   "plugin": [
-    "file:///ABSOLUTE/PATH/TO/your-plugin/dist/index.js"
+    "file:///ABSOLUTE/PATH/TO/your-plugin/dist/harness_init.js"
   ]
 }
 ```

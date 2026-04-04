@@ -95,15 +95,15 @@ describe("opencode dist e2e runtime", () => {
     })
     assertSuccess(build)
 
-    const distIndexJs = path.join(REPO_ROOT, "dist/index.js")
-    if (!fs.existsSync(distIndexJs)) {
-      throw new Error(`build completed but dist index is missing: ${distIndexJs}`)
+    const distPluginEntryJs = path.join(REPO_ROOT, "dist/harness_init.js")
+    if (!fs.existsSync(distPluginEntryJs)) {
+      throw new Error(`build completed but dist plugin entry is missing: ${distPluginEntryJs}`)
     }
 
     const workspace = prepareWorkspace({
       caseId: CASE_ID,
       profile: "opencode-dist",
-      pluginDistIndexJs: distIndexJs,
+      pluginDistIndexJs: distPluginEntryJs,
     })
 
     if (!workspace.workspacePath.startsWith(WORKSPACES_ROOT)) {
@@ -126,7 +126,7 @@ describe("opencode dist e2e runtime", () => {
       assertSuccess(debugConfig)
       expect(debugConfig.cwd).toBe(workspace.workspacePath)
       const config = parseJsonOutput<Record<string, unknown>>(debugConfig.stdout, "debug config")
-      assertDebugConfigHasPlugin(config, canonicalPath(distIndexJs))
+      assertDebugConfigHasPlugin(config, canonicalPath(distPluginEntryJs))
 
       assertConfigContainsHarnessDefinitions({
         config,

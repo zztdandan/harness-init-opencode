@@ -141,7 +141,7 @@ git commit -m "test: add canonical path normalization for e2e source assertions"
 
 ```ts
 expect(await exists(workspacePath)).toBe(true)
-expect(readJson("opencode.json").plugin[0]).toContain("/dist/index.js")
+expect(readJson("opencode.json").plugin[0]).toContain("/dist/harness_init.js")
 ```
 
 - [ ] **Step 2: 运行测试确认失败**
@@ -160,7 +160,7 @@ Expected: FAIL（workspace helper 未实现）
 
 ```json
 {
-  "plugin": ["file:///ABSOLUTE/PATH/TO/dist/index.js"]
+  "plugin": ["file:///ABSOLUTE/PATH/TO/dist/harness_init.js"]
 }
 ```
 
@@ -344,7 +344,7 @@ Expected: FAIL（流程尚未串联）
 
 - 执行 `bun run build`，超时 `120s`
 - 断言退出码为 `0`
-- 断言 `dist/index.js` 存在
+- 断言 `dist/harness_init.js` 存在
 
 - [ ] **Step 4: 串联 workspace 准备并断言挂载文件**
 
@@ -353,7 +353,7 @@ Expected: FAIL（流程尚未串联）
 - 调用 `prepareWorkspace`
 - `workspacePath` 必须以 `tests/opencode/e2e/workspaces/${CASE_ID}` 前缀开头
 - workspace 下存在 `opencode.json`
-- `opencode.json.plugin` 包含 `file:///.../dist/index.js`
+- `opencode.json.plugin` 包含 `file:///.../dist/harness_init.js`
 
 - [ ] **Step 5: 执行并断言 `debug config`**
 
@@ -362,7 +362,7 @@ Expected: FAIL（流程尚未串联）
 - 执行 `<OPENCODE_CLI> debug config`，超时 `30s`
 - 退出码为 `0`
 - stdout 可解析为 JSON 对象
-- 包含 `.../dist/index.js` 挂载证据
+- 包含 `.../dist/harness_init.js` 挂载证据
 - 记录并断言执行 `cwd === workspacePath`
 
 - [ ] **Step 6: 执行并断言 `debug skill` + `debug agent`**

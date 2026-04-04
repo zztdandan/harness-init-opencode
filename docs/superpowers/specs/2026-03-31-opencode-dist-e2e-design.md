@@ -10,7 +10,7 @@
 
 本次包含：
 
-- 基于编译产物（`dist/index.js`）挂载插件并验证 OpenCode 运行时行为
+- 基于编译产物（`dist/harness_init.js`）挂载插件并验证 OpenCode 运行时行为
 - 测试自动化准备（构建产物 + workspace + `opencode.json`）
 - 对以下实体做断言：
   - agent：`harness-init`
@@ -40,7 +40,7 @@
 
 1. 执行 `bun run build` 生成插件编译产物。
 2. 在 `tests/opencode/e2e/workspaces/<case-id>` 创建隔离 workspace。
-3. 在该 workspace 下生成 `opencode.json`，其 `plugin` 字段指向 `file:///ABS_PATH_TO/dist/index.js`。
+3. 在该 workspace 下生成 `opencode.json`，其 `plugin` 字段指向 `file:///ABS_PATH_TO/dist/harness_init.js`。
 4. 在该 workspace 内执行 OpenCode 调试命令：
    - `<OPENCODE_CLI> debug config`
    - `<OPENCODE_CLI> debug skill`
@@ -60,7 +60,7 @@ CLI 解析约定：
 ```json
 {
   "plugin": [
-    "file:///ABSOLUTE/PATH/TO/dedge-harness-init-guide/dist/index.js"
+    "file:///ABSOLUTE/PATH/TO/dedge-harness-init-guide/dist/harness_init.js"
   ]
 }
 ```
@@ -85,7 +85,7 @@ CLI 解析约定：
 
 - 命令退出码必须为 0。
 - stdout 必须可解析为 JSON 对象。
-- 解析后的配置需能证明 workspace 本地挂载生效（包含仓库 dist 插件路径 `.../dist/index.js`）。
+- 解析后的配置需能证明 workspace 本地挂载生效（包含仓库 dist 插件路径 `.../dist/harness_init.js`）。
 - 命令运行的 cwd 必须等于当前 case 的 workspace 路径。
 
 ## 断言模型
@@ -122,7 +122,7 @@ CLI 解析约定：
 
 失败类型：
 
-- 构建产物缺失（`dist/index.js` 不存在）
+- 构建产物缺失（`dist/harness_init.js` 不存在）
 - 插件挂载无效（`opencode.json` 中 plugin 路径非法）
 - 运行时加载失败（必需 agent/skills 缺失）
 - 同名污染（名称存在但来源路径不在预期 dist 前缀下）
