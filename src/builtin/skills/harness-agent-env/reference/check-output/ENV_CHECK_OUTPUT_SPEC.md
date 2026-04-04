@@ -1,11 +1,11 @@
 # check-agent-env 输出主规范（TOML）
 
-本文档定义 `check-agent-env.sh` 的主输出格式，适用于基础环境（Python/JavaScript/Shell）以及 `shell_env.json` 变量回显。
+本文档定义 `check-agent-env.sh` 的主输出格式，适用于基础环境（Python/Javascripts/Shell）以及 `shell_env.json` 变量回显。
 
 ## 生效范围
 
 - 所有项目通用。
-- 当前是主规范，包含 Python/JavaScript/Shell 三种语言环境的检查输出，以及 `script/shell_env.json` 中变量清单输出。
+- 当前是主规范，包含 Python/Javascripts/Shell 三种语言环境的检查输出，以及 `scripts/shell_env.json` 中变量清单输出。
 - 不包含可选其他语言，其他语言输出规范见 `reference/<language>/check-output/ENV_CHECK_OUTPUT_SPEC.md`。
 
 ## 约束
@@ -17,7 +17,7 @@
    - 在 PATH 内可直接调用时写短命令（如 `uv`、`bun`、`bash`）
    - 不可直接调用时写绝对路径
 5. `command` 不带参数。
-6. 必须输出 `shell_env` 段，打印 `script/shell_env.json` 中全部变量。
+6. 必须输出 `shell_env` 段，打印 `scripts/shell_env.json` 中全部变量。
 7. 任一单语言探测失败不得中断整体输出；必须继续完成全部语言段输出。
 8. 单语言探测失败时，对应语言段 `version` 统一写 `"unavailable"`。
 
@@ -43,7 +43,7 @@ version = "..."
 
 
 [shell_env.vars]
-# 如实反应读取 script/shell_env.json 后的全部变量键值对
+# 如实反应读取 scripts/shell_env.json 后的全部变量键值对
 UV_PROJECT_ENVIRONMENT = "/abs/path/to/workspace/.venv"
 
 ```

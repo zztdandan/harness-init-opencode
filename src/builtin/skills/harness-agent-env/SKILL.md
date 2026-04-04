@@ -10,8 +10,8 @@ description: Initialize and continuously manage harness workspace runtime bootst
 本技能负责维护三类“可持续生效”的资产，确保后续会话在 plugin 退出挂载后，仍可通过既定前置机制恢复环境：
 
 1. `scripts/check-agent-env.sh`
-2. `script/shell_source.sh`
-3. `script/shell_env.json`
+2. `scripts/shell_source.sh`
+3. `scripts/shell_env.json`
 
 补充：`AGENTS.md` 仅维护会话启动校验入口与前置约束，不再维护 `shell_source.sh` / `shell_env.json` 的显式执行步骤。
 
@@ -26,7 +26,7 @@ description: Initialize and continuously manage harness workspace runtime bootst
 必须完成：
 
 1. 环境探测（Python → JavaScript → Shell）
-2. 生成/写入三类资产：`scripts/check-agent-env.sh`、`script/shell_source.sh`、`script/shell_env.json`
+2. 生成/写入三类资产：`scripts/check-agent-env.sh`、`scripts/shell_source.sh`、`scripts/shell_env.json`
 3. 在 `AGENTS.md` 注入固定启动段落（仅保留校验入口和前置约束）
 4. 写入 `.tmp/env.json`（初始化阶段必须写）
 
@@ -57,8 +57,8 @@ description: Initialize and continuously manage harness workspace runtime bootst
 
 1. 由 agent 根据技能提示，完成语言环境探测后，维护 `shell_source.sh`、`shell_env.json` 与 `check-agent-env.sh` 三类资产：
 
-  - `script/shell_env.json`：维护 bash 工具自动注入的环境变量键值
-  - `script/shell_source.sh`：维护 bash 工具执行前自动 `source` 的脚本逻辑（例如函数定义、PATH 拼接、辅助别名）
+  - `scripts/shell_env.json`：维护 bash 工具自动注入的环境变量键值
+  - `scripts/shell_source.sh`：维护 bash 工具执行前自动 `source` 的脚本逻辑（例如函数定义、PATH 拼接、辅助别名）
   - `scripts/check-agent-env.sh`：每 session 输出语言环境事实，并附带 `shell_env.json` 设定变量清单（TOML），维护及编写规范见下文
 
 2. 在 harness 工作区的 AGENTS.md 中，维护固定段落：会话只跑校验脚本，且声明上述其他两个前置资产受 `harness-agent-env` 管理。
@@ -67,7 +67,7 @@ description: Initialize and continuously manage harness workspace runtime bootst
 
 ## shell_source 与 shell_env 约定
 
-### `script/shell_env.json`
+### `scripts/shell_env.json`
 
 固定职责：
 
@@ -89,7 +89,7 @@ description: Initialize and continuously manage harness workspace runtime bootst
 - 传统 python 虚拟环境（venv）不通过环境变量传递路径，而是通过 `check-agent-env.sh` 输出的 `python.command` 字段传递可调用命令路径。
 
 
-### `script/shell_source.sh`
+### `scripts/shell_source.sh`
 
 固定职责：
 
@@ -106,11 +106,11 @@ description: Initialize and continuously manage harness workspace runtime bootst
 
 固定要求：
 
-1. 仅检测已选中语言环境的工具链（Python/JavaScript/Shell/补充语言）及版本信息，比如已经选择了 uv 就不再在脚本中检测 python python3 .venv/bin/python 等
-2. 在默认 bash 前置机制已生效的前提下输出结果，即结果需体现 `script/shell_env.json` 注入后的环境变量，以及 `script/shell_source.sh` source 后的可用状态
+1. 仅检测已选中语言环境的工具链（Python/Javascripts/Shell/补充语言）及版本信息，比如已经选择了 uv 就不再在脚本中检测 python python3 .venv/bin/python 等
+2. 在默认 bash 前置机制已生效的前提下输出结果，即结果需体现 `scripts/shell_env.json` 注入后的环境变量，以及 `scripts/shell_source.sh` source 后的可用状态
 3. `command` 可以是短命令或绝对路径，不带参数
 4. 若已在 PATH 中，`command` 直接写短命令；否则写绝对路径
-5. 必须新增输出 `shell_env` 段，打印 `script/shell_env.json` 中全部设定变量
+5. 必须新增输出 `shell_env` 段，打印 `scripts/shell_env.json` 中全部设定变量
 6. 不输出建议、安装提示、冗余日志
 
 脚本的 stdio输出规范与示例见：
@@ -125,7 +125,7 @@ description: Initialize and continuously manage harness workspace runtime bootst
 
 ```text
 main:
-  读取 {workspace}/script/shell_env.json
+  读取 {workspace}/scripts/shell_env.json
   若缺失 / 不可读 / 非简单 KV JSON:
     stderr: "shell_env.json invalid"
     exit 1
@@ -307,7 +307,7 @@ write_shell_env_vars({shell_env_json_object}):
     写 {key} = "{toml_escaped(value)}"
 ```
 
-这里回显的是 `script/shell_env.json` 的设定值，不做推导、不补字段、不漏字段。
+这里回显的是 `scripts/shell_env.json` 的设定值，不做推导、不补字段、不漏字段。
 
 #### 典型事实组合示例（模板思路）
 
@@ -324,7 +324,7 @@ write_shell_env_vars({shell_env_json_object}):
 - 单一语言环境检测失败时，不提前退出；继续完成其余语言段并输出完整 TOML。
 - 语言不可用信息应体现在对应语言段字段值中，不输出冗余提示文本。
 - 注意将 agent 是否继续执行后续任务的自主权交给 agent 与用户判断。
-- 若 `script/shell_env.json` 缺失或格式错误，应直接报错并非 0 退出。
+- 若 `scripts/shell_env.json` 缺失或格式错误，应直接报错并非 0 退出。
 
 
 ## 补充其他语言环境规范
@@ -360,7 +360,7 @@ Go check 输出规范是对主规范的补充，不替代主规范。
 执行环境校验脚本：`bash scripts/check-agent-env.sh`
 
 约束：
-- `script/shell_source.sh` 与 `script/shell_env.json` 影响 bash 前置行为，仅允许通过 `harness-agent-env` 维护。
+- `scripts/shell_source.sh` 与 `scripts/shell_env.json` 影响 bash 前置行为，仅允许通过 `harness-agent-env` 维护。
 - 若缺失 `harness-agent-env` 管理，不允许agent修改这两个前置资产。不要求业务 agent 在会话中显式执行或显式说明其调用细节。
 ```
 

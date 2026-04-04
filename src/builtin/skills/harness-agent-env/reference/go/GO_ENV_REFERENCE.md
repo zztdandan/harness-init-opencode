@@ -24,9 +24,9 @@ Go 启用时，`check-agent-env.sh` 的输出补充要求见：
    - 优先使用用户给出的内容
    - 若用户不给出，则按照下文的默认路径探测
    - 若默认路径下探测结果不存在或不符合版本，则按照环境发现流程探测
-3. 在探测好所有环境后，增补 `script/shell_env.json`：维护 bash 工具自动注入的go运行环境变量键值，包含所有关键 go env 环境变量（go语言的所有环境均可通过环境变量设置，故仅需维护这个文件即可注入所有探测到的go环境）
+3. 在探测好所有环境后，增补 `scripts/shell_env.json`：维护 bash 工具自动注入的go运行环境变量键值，包含所有关键 go env 环境变量（go语言的所有环境均可通过环境变量设置，故仅需维护这个文件即可注入所有探测到的go环境）
 3. 使用参考脚本中的工具相关脚本，检测及补充 go 工具的安装（工具安装前需临时设置好所有环境，根据上个步骤的最后探测结果）
-4. 若没有特殊要求，跳过增补维护`script/shell_source.sh`：go的几乎所有参数均通过环境变量配置，若用户没有特殊要求，这个脚本没有 go相关配置需要维护
+4. 若没有特殊要求，跳过增补维护`scripts/shell_source.sh`：go的几乎所有参数均通过环境变量配置，若用户没有特殊要求，这个脚本没有 go相关配置需要维护
 5. `scripts/check-agent-env.sh`：根据 `check-output/ENV_CHECK_OUTPUT_SPEC.md` 的规范编写探测脚本，输出 Go 环境的探测结果
 6. 在 harness 工作区的 AGENTS.md 中，无需为 go语言维护额外文字及段落，遵从主规范的维护即可
 7. 由于主流程中已经存在 运行`scripts/check-agent-env.sh`的相关流程，go环境维护仅需确认额外的go环境结果是否正确即可
@@ -122,7 +122,7 @@ bash scripts/install_go124_tools.sh [goroot] [gopath] [gobin]
 - `CGO_ENABLED=1`
 - `GOMODCACHE`：脚本未显式导出，沿用 Go 默认值（通常为 `${GOPATH}/pkg/mod`）
 
-**补充约定**：`GOPRIVATE`、`GONOPROXY`、`GONOSUMDB` 默认为 `gitlab-c7n.lgdxtech.com`。仅当用户明确要求其他私有模块域名或代理策略时，Agent 才在 `script/shell_env.json`中设置其他值
+**补充约定**：`GOPRIVATE`、`GONOPROXY`、`GONOSUMDB` 默认为 `gitlab-c7n.lgdxtech.com`。仅当用户明确要求其他私有模块域名或代理策略时，Agent 才在 `scripts/shell_env.json`中设置其他值
 
 ## 重要规则
 

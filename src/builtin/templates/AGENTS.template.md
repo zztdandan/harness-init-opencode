@@ -69,8 +69,8 @@ Harness 工作区：指的是当前 AGENTS.md所在目录，该目录是 agent �
 约束：
 
 - `check-agent-env.sh` 负责输出，不承担 `source` 语义。
-- `script/shell_source.sh` 与 `script/shell_env.json` 仅影响 bash 前置行为，不在会话内显式执行。
-- 在没有 `harness-agent-env` 技能管理时，不允许调整 `script/shell_source.sh` 与 `script/shell_env.json`。
+- `scripts/shell_source.sh` 与 `scripts/shell_env.json` 仅影响 bash 前置行为，不在会话内显式执行。
+- 在没有 `harness-agent-env` 技能管理时，不允许调整 `scripts/shell_source.sh` 与 `scripts/shell_env.json`。
 - 脚本内容必须与最新环境探测结果一致，且 `check-agent-env.sh` 输出以脚本事实为准。
 - Bootstrap phase vs steady state：初始化阶段允许降级探测；稳态阶段由 agent 根据探测结果决定。
 - 当存在 `.venv` 且需激活时，使用 `source .venv/bin/activate`。
