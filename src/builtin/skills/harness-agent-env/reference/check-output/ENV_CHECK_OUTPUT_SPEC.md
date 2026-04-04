@@ -1,11 +1,11 @@
 # check-agent-env 输出主规范（TOML）
 
-本文档定义 `check-agent-env.sh` 的主输出格式，适用于基础环境（Python/JavaScript/Shell）。
+本文档定义 `check-agent-env.sh` 的主输出格式，适用于基础环境（Python/JavaScript/Shell）以及 `shell_env.json` 变量回显。
 
 ## 生效范围
 
 - 所有项目通用。
-- 当前是主规范，仅包含 Python/JavaScript/Shell 三种语言环境的检查输出。
+- 当前是主规范，包含 Python/JavaScript/Shell 三种语言环境的检查输出，以及 `script/shell_env.json` 中变量清单输出。
 - 不包含可选其他语言，其他语言输出规范见 `reference/<language>/check-output/ENV_CHECK_OUTPUT_SPEC.md`。
 
 ## 约束
@@ -17,6 +17,7 @@
    - 在 PATH 内可直接调用时写短命令（如 `uv`、`bun`、`bash`）
    - 不可直接调用时写绝对路径
 5. `command` 不带参数。
+6. 必须输出 `shell_env` 段，打印 `script/shell_env.json` 中全部变量。
 
 ## 固定结构
 
@@ -24,9 +25,9 @@
 schema_version = "1"
 
 [python]
-selected = "uv"        # uv | venv | python
-command = "uv"
-version = "..."
+selected = "uv"        # 选择的 Python 环境管理工具，如 uv、venv、conda
+command = "uv"         # 如实反应使用 哪个命令（可能带路径）运行的 python环境入口
+version = "..."        # 如实反应使用 命令查看 version 后的返回值
 
 [javascript]
 selected = "bun"       # bun | node
@@ -37,13 +38,17 @@ version = "..."
 selected = "bash"      # bash | zsh
 command = "bash"
 version = "..."
+
+
+[shell_env.vars]
+# 如实反应读取 script/shell_env.json 后的全部变量键值对
+UV_PROJECT_ENVIRONMENT = ".venv"
+
 ```
 
-## 失败处理
 
-- 不做额外漂移检测与漂移输出。
-- 若脚本执行发现环境不可用或与预期不符，应直接报错，打出日志，并在 stdio中警告 agent不得使用该语言环境
 ## 禁止项
 
 - 不得输出调试日志、彩色提示、推荐文案。
-- 若某语言环境不可用，不得中断整个探测进程
+- 若某语言环境不可用，不得中断整个探测进程。
+- 不得遗漏 `shell_env.vars` 中任一已设定变量。

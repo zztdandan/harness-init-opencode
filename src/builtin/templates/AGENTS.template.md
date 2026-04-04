@@ -58,15 +58,14 @@
 
 每轮对话启动时，仅执行一次以下步骤：
 
-1. 若存在环境变量初始化脚本，则在当前 shell 中加载：
-   - `source scripts/init-agent-env.sh`
-2. 执行环境校验脚本（输出当前事实）：
+1. 执行环境校验脚本（输出当前事实）：
    - `bash scripts/check-agent-env.sh`
 
 约束：
 
 - `check-agent-env.sh` 负责输出，不承担 `source` 语义。
-- `init-agent-env.sh` 负责导出环境变量，不承担探测说明输出。
+- `script/shell_source.sh` 与 `script/shell_env.json` 仅影响 bash 前置行为，不在会话内显式执行。
+- 在没有 `harness-agent-env` 技能管理时，不允许调整 `script/shell_source.sh` 与 `script/shell_env.json`。
 - 脚本内容必须与最新环境探测结果一致，且 `check-agent-env.sh` 输出以脚本事实为准。
 - Bootstrap phase vs steady state：初始化阶段允许降级探测；稳态阶段由 agent 根据探测结果决定。
 - 当存在 `.venv` 且需激活时，使用 `source .venv/bin/activate`。

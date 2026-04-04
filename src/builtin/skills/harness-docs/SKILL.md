@@ -29,8 +29,8 @@ description: Initialize and manage AGENTS.md and harness documentation system wi
    - `🚨 Worktree 摘出范围（强制）` 规则
 5. 环境章节不再在 `harness-docs` 内重复定义探测细节；环境探测与脚本内容由 `harness-agent-env` 统一负责。
 6. `AGENTS.md` 仅保留会话启动的 env 入口说明：
-   - `source scripts/init-agent-env.sh`
    - `bash scripts/check-agent-env.sh`
+   - `script/shell_source.sh` + `script/shell_env.json` 仅声明为 bash 前置影响资产（不在 AGENTS.md 维护显式执行步骤）
    其余 Python/JS/Shell/Go 探测细则以 `harness-agent-env` 的最新事实为准。
 7. 强制包含 MUSTDO 区块，且至少包含：
    - 代码注释需可 review、可读
@@ -47,14 +47,14 @@ description: Initialize and manage AGENTS.md and harness documentation system wi
 4. 维护 `docs/issue/`、`docs/pr/`、`docs/ontology/`、`docs/superpowers/` 的目录一致性与索引可读性。
 5. 当模板与现实冲突时，以运行时事实为准，并在文档中标注差异处理结论。
 6. 管理阶段输入优先级：
-   - P0（权威事实）：根目录 `AGENTS.md`、`scripts/check-agent-env.sh`、`scripts/init-agent-env.sh`、当前仓库 git 结构
+   - P0（权威事实）：根目录 `AGENTS.md`、`scripts/check-agent-env.sh`、`script/shell_source.sh`、`script/shell_env.json`、当前仓库 git 结构
    - P1（参考约束）：模板文件（若可见）
    - P2（历史初始化输入）：`.tmp/doc-input.json`（仅在存在时参考，不作为硬依赖）
 
 ## 输入与输出
 
 - 输入（初始化）：`.tmp/doc-input.json` + `src/builtin/templates/AGENTS.template.md | dist/builtin/templates/AGENTS.template.md`
-- 输入（管理）：根目录 `AGENTS.md`（必读）+ `scripts/check-agent-env.sh` + `scripts/init-agent-env.sh` + docs/gittree 事实；`.tmp/` 仅在存在时参考
+- 输入（管理）：根目录 `AGENTS.md`（必读）+ `scripts/check-agent-env.sh` + `script/shell_source.sh` + `script/shell_env.json` + docs/gittree 事实；`.tmp/` 仅在存在时参考
 - 输出：根目录 `AGENTS.md`
 
 注意：模板仅提供结构提示，不提供渲染脚本，最终文本由 agent 按现场上下文直接撰写。
