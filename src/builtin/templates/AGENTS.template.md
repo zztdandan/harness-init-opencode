@@ -5,6 +5,11 @@
 
 **MUSTDO** 编写代码时必须保留足够注释以支持 review，可补充但不得删除有价值注释。
 
+## 0) 用语约定
+
+Harness 工作区：指的是当前 AGENTS.md所在目录，该目录是 agent 应启动时的工作目录，包含 agent 所需所有运行配置与运行时
+主管理项目：本 agent 实际要进行管理及操作的 git项目，该项目是纯代码项目，内部不含 agent 工作运行时与 agent 辅助相关内容，是纯粹的工程化代码。请注意在进行 worktree摘出时，摘出的是主管理项目 git库而不是工作区 git库
+
 ## 1) Project Tree & Task Status (authoritative)
 
 状态标记：`✅ 已完成` / `🟡 进行中` / `⚪ 未开始` / `🚧 阻塞` / `📌 参考`

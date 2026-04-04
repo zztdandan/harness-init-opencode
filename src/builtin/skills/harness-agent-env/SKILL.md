@@ -15,13 +15,7 @@ description: Initialize and continuously manage harness workspace runtime bootst
 
 补充：`AGENTS.md` 仅维护会话启动校验入口与前置约束，不再维护 `shell_source.sh` / `shell_env.json` 的显式执行步骤。
 
-### 会话执行约束
 
-每轮对话启动时，仅执行一次：
-
-1. `bash scripts/check-agent-env.sh`
-
-`script/shell_source.sh` 与 `script/shell_env.json` 由 harness 作为 bash 前置机制自动生效；不要求 agent 在会话中显式执行或显式说明其调用细节。
 
 ## 技能工作模式：初始化 & 管理
 
@@ -51,13 +45,13 @@ description: Initialize and continuously manage harness workspace runtime bootst
 
 探测链路（初始化/重做阶段）：
 
-- Python：`uv -> venv -> python`
+- Python：`uv -> conda -> venv -> python -> python3`
 - JavaScript：`bun -> node`
 - Shell：`bash -> zsh`
 
-即优先探测更现代的工具链（如 uv、bun、bash），若不可用再探测传统选项（venv、node、zsh），最后才是系统默认（python）。
+即优先探测更现代的工具链（如 uv、bun、bash），若不可用再探测传统选项（conda、venv、node、zsh），最后才是系统默认（python/python3）。
 
-说明：`check-agent-env.sh` 是探测环境后的验证及 stdio 输出环境情况的脚本，并不是探测脚本，只输出“初始化或重做阶段已选定的可用链路 + shell_env.json 已设定环境变量”。
+说明：`check-agent-env.sh` 是探测环境后的验证及 stdio 输出环境情况的脚本，并不是探测脚本，只输出“初始化或重做阶段已选定链路 + shell_env.json 已设定环境变量”。
 
 ## 技能工作流程
 
@@ -68,7 +62,7 @@ description: Initialize and continuously manage harness workspace runtime bootst
   - `scripts/check-agent-env.sh`：每 session 输出语言环境事实，并附带 `shell_env.json` 设定变量清单（TOML），维护及编写规范见下文
 
 2. 在 harness 工作区的 AGENTS.md 中，维护固定段落：会话只跑校验脚本，且声明上述其他两个前置资产受 `harness-agent-env` 管理。
-3. 在一个 Bash脚本中，完成临时 `shell_env.json`  环境变量注入，以及 `shell_source.sh` 的 source，在这个条件下，执行 `check-agent-env.sh` 输出环境探测结果，检查是否与要求相符，若相符本技能工作流程结束，否则回到第1步继续维护资产直到满足要求。
+3. 维护完成后，执行 `check-agent-env.sh` 做最终校验，确认输出与规范一致；若不一致则回到第 1 步继续收敛。
 
 
 ## shell_source 与 shell_env 约定
@@ -136,7 +130,7 @@ main:
     stderr: "shell_env.json invalid"
     exit 1
 
-  读取初始化阶段沉淀的已选中事实（示意）：
+  读取已选中事实（示意）：
     {python.selected}, {python.command.detected}
     {javascript.selected}, {javascript.command.detected}
     {shell.selected}, {shell.command.detected}
@@ -145,7 +139,7 @@ main:
   初始化 TOML 缓冲
   写入 schema_version = "1"
 
-  按“已选中事实”依次校验并写段：
+  按“已选中事实”依次校验并写段（单语言失败不提前退出）：
     write_python_section_from_fact(...)
     write_javascript_section_from_fact(...)
     write_shell_section_from_fact(...)
@@ -153,8 +147,15 @@ main:
 
   写入 [shell_env.vars]（原样回显 shell_env.json 全量键值）
   stdout 一次性输出 TOML
-  exit 0
+  仅在脚本本身异常（例如 shell_env.json 非法）时非 0 退出；
+  单一语言不可用时仍输出完整结果并 0 退出
 ```
+
+已选中事实最小约定（用于让脚本可持续维护，不限定具体落盘介质）：
+
+- Python / JavaScript / Shell 至少包含：`selected` 与 `command.detected`
+- `selected` 必须来自本技能允许值（例如 Python: `uv|conda|venv|python|python3`）
+- `command.detected` 必须可映射为“短命令或绝对路径”输出语义
 
 #### 路径处理模板（核心）
 
@@ -177,6 +178,7 @@ resolve_command_for_output({detected_command}):
 
 - `command` 字段最终只能是“短命令”或“绝对路径”，不能是相对路径。
 - 即使实际校验时调用的是 `{workspace}/.venv/bin/python`，若该命令不在 PATH，输出也应是绝对路径。
+- 更建议设置一些环境变量代替长绝对路径，使得命令路径是环境变量+短路径的结合体，甚至利用 source 脚本定义别名函数等方式让输出更简洁（例如输出 `python`，但实际执行时通过环境变量或 source 脚本让 `python` 实际调用到 `/home/base/repo/<project>/.venv/bin/python`）
 - 全程只围绕前面探测结论里的 `{detected_command}` 做校验，不新增候补命令。
 
 #### Python 段模板（按已选结果分支）
@@ -185,17 +187,26 @@ resolve_command_for_output({detected_command}):
 write_python_section_from_fact({python.selected}, {python.command.detected}):
   if {python.selected} == "uv":
     执行 {python.version_probe = "{python.command.detected} --version"}
-    失败则 stderr: "python environment check failed: uv unavailable"; exit 1
+    若失败则标记该语言 unavailable，并继续后续语言段写入
     {python.command.output} = resolve_command_for_output({python.command.detected})
     写 [python]
     写 selected = "uv"
     写 command = {python.command.output}
     写 version = {python.version.stdout_raw}
 
+  else if {python.selected} == "conda":
+    执行 {python.version_probe = "{python.command.detected} --version"}
+    若失败则标记该语言 unavailable，并继续后续语言段写入
+    {python.command.output} = resolve_command_for_output({python.command.detected})
+    写 [python]
+    写 selected = "conda"
+    写 command = {python.command.output}
+    写 version = {python.version.stdout_raw}
+
   else if {python.selected} == "venv":
     # 典型 detected_command 可能是 ".venv/bin/python" 或其绝对路径
     执行 {python.version_probe = "{python.command.detected} --version"}
-    失败则 stderr: "python environment check failed: venv unavailable"; exit 1
+    若失败则标记该语言 unavailable，并继续后续语言段写入
     {python.command.output} = resolve_command_for_output({python.command.detected})
     写 [python]
     写 selected = "venv"
@@ -204,17 +215,26 @@ write_python_section_from_fact({python.selected}, {python.command.detected}):
 
   else if {python.selected} == "python":
     执行 {python.version_probe = "{python.command.detected} --version"}
-    失败则 stderr: "python environment check failed: python unavailable"; exit 1
+    若失败则标记该语言 unavailable，并继续后续语言段写入
     {python.command.output} = resolve_command_for_output({python.command.detected})
     写 [python]
     写 selected = "python"
+    写 command = {python.command.output}
+    写 version = {python.version.stdout_raw}
+
+  else if {python.selected} == "python3":
+    执行 {python.version_probe = "{python.command.detected} --version"}
+    若失败则标记该语言 unavailable，并继续后续语言段写入
+    {python.command.output} = resolve_command_for_output({python.command.detected})
+    写 [python]
+    写 selected = "python3"
     写 command = {python.command.output}
     写 version = {python.version.stdout_raw}
 ```
 
 强约束：
 
-- 已选 `uv` 就只校验 `{python.command.detected}` 对应的 uv 入口，不再检查 `python/python3/.venv/bin/python`。
+- 已选 `uv` 就只校验 `{python.command.detected}` 对应的 uv 入口，不再检查 `conda/python/python3/.venv/bin/python`。
 - 已选 `venv` 就只校验既定 venv 入口（哪怕是 `.venv/bin/python`），不再回退 `uv` 或系统 python。
 
 #### JavaScript 段模板
@@ -223,7 +243,7 @@ write_python_section_from_fact({python.selected}, {python.command.detected}):
 write_javascript_section_from_fact({javascript.selected}, {javascript.command.detected}):
   if {javascript.selected} == "bun":
     执行 {javascript.version_probe = "{javascript.command.detected} --version"}
-    失败则 stderr: "javascript environment check failed: bun unavailable"; exit 1
+    若失败则标记该语言 unavailable，并继续后续语言段写入
     {javascript.command.output} = resolve_command_for_output({javascript.command.detected})
     写 [javascript]
     写 selected = "bun"
@@ -232,7 +252,7 @@ write_javascript_section_from_fact({javascript.selected}, {javascript.command.de
 
   else if {javascript.selected} == "node":
     执行 {javascript.version_probe = "{javascript.command.detected} --version"}
-    失败则 stderr: "javascript environment check failed: node unavailable"; exit 1
+    若失败则标记该语言 unavailable，并继续后续语言段写入
     {javascript.command.output} = resolve_command_for_output({javascript.command.detected})
     写 [javascript]
     写 selected = "node"
@@ -246,7 +266,7 @@ write_javascript_section_from_fact({javascript.selected}, {javascript.command.de
 write_shell_section_from_fact({shell.selected}, {shell.command.detected}):
   if {shell.selected} == "bash":
     执行 {shell.version_probe = "{shell.command.detected} --version"}
-    失败则 stderr: "shell environment check failed: bash unavailable"; exit 1
+    若失败则标记该语言 unavailable，并继续后续语言段写入
     {shell.command.output} = resolve_command_for_output({shell.command.detected})
     写 [shell]
     写 selected = "bash"
@@ -255,7 +275,7 @@ write_shell_section_from_fact({shell.selected}, {shell.command.detected}):
 
   else if {shell.selected} == "zsh":
     执行 {shell.version_probe = "{shell.command.detected} --version"}
-    失败则 stderr: "shell environment check failed: zsh unavailable"; exit 1
+    若失败则标记该语言 unavailable，并继续后续语言段写入
     {shell.command.output} = resolve_command_for_output({shell.command.detected})
     写 [shell]
     写 selected = "zsh"
@@ -268,7 +288,7 @@ write_shell_section_from_fact({shell.selected}, {shell.command.detected}):
 ```text
 write_extra_section_from_fact({lang.name}, {lang.selected}, {lang.command.detected}, {lang.version.arg}):
   执行 {"{lang.command.detected} {lang.version.arg}"}
-  失败则 stderr: "{lang.name} environment check failed: {lang.selected} unavailable"; exit 1
+  若失败则标记该语言 unavailable，并继续后续语言段写入
   {lang.command.output} = resolve_command_for_output({lang.command.detected})
   写 [{lang.name}]
   写 selected = {lang.selected}
@@ -276,7 +296,7 @@ write_extra_section_from_fact({lang.name}, {lang.selected}, {lang.command.detect
   写 version = {lang.version.stdout_raw}
 ```
 
-补充语言字段名与附加约束优先服从各自 reference；但“只校验既定事实、失败即非 0 退出、无冗余日志”不变。
+补充语言字段名与附加约束优先服从各自 reference；但“只校验既定事实、单语言失败不提前退出、无冗余日志”不变。
 
 #### `shell_env` 段模板
 
@@ -298,11 +318,12 @@ write_shell_env_vars({shell_env_json_object}):
 
 
 
-### `check-agent-env`运行失败处理
+### `check-agent-env` 失败处理
 
 - 不做额外漂移检测与漂移输出。
-- 若脚本执行发现设定在脚本中的运行结果出现失败，即判定为环境不可用，直接在 stdio中提示某个语言的环境检测失败不可用，并以非 0 退出。
-- 注意将agent是否往下运行的自主权仍交给agent与用户判断，脚本
+- 单一语言环境检测失败时，不提前退出；继续完成其余语言段并输出完整 TOML。
+- 语言不可用信息应体现在对应语言段字段值中，不输出冗余提示文本。
+- 注意将 agent 是否继续执行后续任务的自主权交给 agent 与用户判断。
 - 若 `script/shell_env.json` 缺失或格式错误，应直接报错并非 0 退出。
 
 
@@ -326,6 +347,8 @@ Go 对 check 输出行为的补充约束全部下沉至 reference，且仅在需
 Go check 输出规范是对主规范的补充，不替代主规范。
 
 ## AGENTS.md 集成（固定段落）
+说明：本段是给“harness 初始化完成后、在该工作区内运行的业务 agent”使用的运行约束，不用于限制 `harness-init` agent 在维护本技能资产时的实现动作。
+
 
 必须维护以下段落（允许小幅文案差异，意思不变）：
 
@@ -338,7 +361,7 @@ Go check 输出规范是对主规范的补充，不替代主规范。
 
 约束：
 - `script/shell_source.sh` 与 `script/shell_env.json` 影响 bash 前置行为，仅允许通过 `harness-agent-env` 维护。
-- 若缺失 `harness-agent-env` 管理，不允许agent修改这两个前置资产。
+- 若缺失 `harness-agent-env` 管理，不允许agent修改这两个前置资产。不要求业务 agent 在会话中显式执行或显式说明其调用细节。
 ```
 
 ## 输出结构（.tmp/env.json）

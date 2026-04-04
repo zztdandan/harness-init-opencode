@@ -4,7 +4,7 @@
 
 主规范见：`../../check-output/ENV_CHECK_OUTPUT_SPEC.md`。
 
-失败处理完全继承主规范（不做额外漂移检测；异常直接报错并非 0 退出）。
+失败处理完全继承主规范（不做额外漂移检测；单语言失败不提前退出；仅脚本异常时非 0 退出）。
 
 ## 生效范围
 
@@ -29,6 +29,5 @@ command = "go"
 version = "go1.24.1"
 
 [shell_env.vars]
-# 所有go 环境设定已经维护在 shell.env中，会一起打出
+# 所有 Go 环境设定已维护在 shell_env.json 中，会一起输出
 ```
-
