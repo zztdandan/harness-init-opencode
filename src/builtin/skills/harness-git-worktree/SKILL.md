@@ -8,7 +8,6 @@ description: Initialize and manage main git project, submodule topology, and .wo
 ## 守则
 
 - 该技能负责主管理项目接入与后续 git/worktree 管理，贯穿初始化与日常维护。
-- Gate B 为硬门禁：未明确主管理项目目录前，不得执行仓库改造动作。
 - 所有潜在破坏性操作（删除、重置、覆盖）必须二次确认。
 - 任何用户未明确的仓库策略（远端、分支、子模块关系）不得由技能自行猜测定稿。
 

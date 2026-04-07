@@ -1,172 +1,135 @@
 # dedge-harness-init-guide
 
-一个双平台插件项目：支持 **OpenCode** 和 **Claude** 两种加载方式，注入 `agent + skills`，提供 harness 初始化主 agent，用于从 0 构建可交接的 agent 工作区。
+面向 **OpenCode** 的 harness 初始化与会话环境准备插件集合。项目当前提供两个插件：
 
-## What this plugin does
+- `harness_init.js`：注入 `harness-init` 主 agent 与内置 skills。
+- `harness_shell_env_prepare_plugin.js`：在会话内准备 bash 前置环境（`session_env.json` + `shell_source.sh`）。
 
-- 运行时注入主 agent（`harness-init`），不改写用户配置
-- 注入内置 skills（环境探测、仓库组织、AGENTS.md 编写）
-- 默认不抢占用户常规会话（仅注册，不设默认 agent）
-- **双平台支持**：
-  - OpenCode: 通过 config hook 动态注入
-  - Claude: 通过 marketplace.json 声明式加载
+## Two Plugins
 
-## Plugin capabilities
+### 1) harness-init-plugin（`dist/harness_init.js`）
+功能：
+- 提供一个即插即用的 harness 工作目录管理全套功能，包括一个 agent 和3个技能。提供一套完整可扩展的的 harness 维护框架
 
-- **Gate A**：当前目录已是 git 根仓库时，强制征求用户处理方案
-- **Gate B**：必须明确主管理项目目录才能继续
-- 非门禁步骤使用默认推荐，减少无效交互
-- 统一 `.worktrees/` 策略与文档骨架
 
-## Quick start
+职责：
 
-### OpenCode 插件
+- 通过 config hook 注入 `agent.harness-init`
+- 注入内置 skills 路径（`dist/builtin/skills`）
+- 默认注入 skill 权限：`harness-agent-env`、`harness-git-worktree`、`harness-docs`
+- 默认不抢占用户会话，不会把 `harness-init` 设为全局默认 agent
 
-#### 1) 安装依赖
+### 2) harness_shell_env_prepare_plugin（`dist/harness_shell_env_prepare_plugin.js`）
+
+职责：
+
+- 在会话内一次性读取 `scripts/session_env.json`（要求 `schema = "harness-shell-env/v1"`）并缓存为 env
+- 通过 `shell.env` hook 将缓存 env 注入 shell 执行环境
+- 通过 `tool.execute.before` 仅改写 `bash` 工具命令，前置：
+  - `. "{worktree}/scripts/shell_source.sh" >/dev/null 2>&1 || true; <original_command>`
+
+关键语义：
+
+- `session_env.json` 是会话级缓存快照（同会话内文件变更不会自动刷新）
+- `shell_source.sh` 每次 bash 调用都会重新 source（同会话内变更会生效）
+- source 失败不阻断原命令
+
+## Quick Start
+
+### 1) 安装依赖
 
 ```bash
 bun install
 ```
 
-#### 2) 构建插件
+### 2) 构建 dist
 
 ```bash
 bun run build
 ```
 
-#### 3) 在 OpenCode 配置插件路径
+### 3) 在 OpenCode 配置两个插件
 
 `opencode.json` 示例：
 
 ```json
 {
   "plugin": [
-    "file:///ABSOLUTE/PATH/TO/dedge-harness-init-guide/dist/harness_init.js"
+    "file:///ABSOLUTE/PATH/TO/dedge-harness-init-guide/dist/harness_init.js",
+    "file:///ABSOLUTE/PATH/TO/dedge-harness-init-guide/dist/harness_shell_env_prepare_plugin.js"
   ]
 }
 ```
 
-### Claude 插件
+## Long-Term Mode
 
-#### 1) 构建 Claude 插件
+初始化完成后，建议进入长期模式：
 
-```bash
-bun run build:claude
-```
+- 保留 `harness_shell_env_prepare_plugin.js` 持续提供会话环境前置
+- 将 `harness_init.js` 注释掉（仅在需要重新初始化/重构工作区结构时再启用）
 
-#### 2) 链接到 Claude
-
-```bash
-ln -s $(pwd)/dist-claude ~/.claude/skills/harness-init-plugin
-```
-
-#### 3) 使用
-
-在 Claude 对话中调用：
-```
-/harness-init
-```
-
-详细说明见 [CLAUDE_PLUGIN.md](./CLAUDE_PLUGIN.md)
-
-## Loading modes
-
-- **源码加载（开发联调）**
+示例：
 
 ```json
 {
   "plugin": [
-    "file:///ABSOLUTE/PATH/TO/dedge-harness-init-guide/src/index.ts"
+    "file:///ABSOLUTE/PATH/TO/dedge-harness-init-guide/dist/harness_shell_env_prepare_plugin.js"
+    // "file:///ABSOLUTE/PATH/TO/dedge-harness-init-guide/dist/harness_init.js"
   ]
 }
 ```
 
-- **dist 加载（稳定交付）**
+## Plugin Constraints
 
-```json
-{
-  "plugin": [
-    "file:///ABSOLUTE/PATH/TO/dedge-harness-init-guide/dist/harness_init.js"
-  ]
-}
-```
+以下限制来自当前 agent/skill 与插件实现事实：
 
-## 挂载成功自检（推荐）
+- `harness-init-plugin` 只负责注入 agent/skills，不注入自定义 tool。
+- `harness_shell_env_prepare_plugin` 当前仅对 `bash` 工具改写命令，不改写 `read/glob/grep` 等工具。
+- `session_env.json` 必须是对象结构，且满足 schema：`harness-shell-env/v1`；非法键会被过滤。
+- 环境变量键名仅接受：`[A-Za-z_][A-Za-z0-9_]*`。
+- `harness-agent-env` / `harness-docs` 的技能文档当前仍描述 `scripts/shell_env.json`，与新插件使用的 `scripts/session_env.json` 存在命名差异；实际运行请以插件实现为准。
+- `harness-init` 设计中包含 Gate A/Gate B 门禁与文档/拓扑治理流程，不适合在未确认主管理项目目录时强行执行。
 
-以下自检步骤只读，不会初始化目录。
+## Version 0.1.0
 
-### 1) 看解析后的配置是否包含本插件
+当前版本：`0.1.0`
 
-```bash
-opencode debug config
-```
+已具备能力：
 
-重点检查：
+- 双插件分离交付：初始化治理与会话环境前置解耦
+- dist 双入口构建：`harness_init.js` + `harness_shell_env_prepare_plugin.js`
+- 会话级 env 缓存 + 每次 bash source 前置
+- shell 前置失败降级（不中断命令）
+- 单元与 e2e 覆盖核心加载与行为语义
 
-- `plugin` 数组里包含 `file:///.../dedge-harness-init-guide/dist/harness_init.js`
-- `agent.harness-init` 已注入
-- `skills.paths` 包含 `.../dist/builtin/skills`
-- `permission.skill` 包含：`harness-agent-env`、`harness-git-worktree`、`harness-docs`
+## Roadmap
 
-### 2) 看启动日志是否实际加载插件
+- `0.1.0`（已实现）
+  - 交付双插件架构
+  - 打通 OpenCode dist 挂载与核心测试
 
-```bash
-opencode debug config --print-logs --log-level DEBUG
-```
+- `0.1.1`（计划）
+  - 对齐 skill 文档中的 `shell_env.json` / `session_env.json` 命名
+  - 增加更明确的插件组合示例与迁移说明
+  - 补充针对会话缓存语义的 e2e 固化用例
 
-重点检查日志中是否出现：
+- `0.2.0`（计划）
+  - 增强环境资产 schema 校验与错误可观测性
+  - 提供更细粒度的前置策略（按目录/命令模式）
+  - 输出更完整的运行诊断信息（便于排障）
 
-- `service=plugin path=file:///.../dedge-harness-init-guide/dist/harness_init.js loading plugin`
+- 未来计划
+  - 与 `harness-agent-env` / `harness-docs` 做规范统一与自动迁移
+  - 探索可选的会话缓存刷新机制（在不破坏稳定性的前提下）
+  - 持续补齐发布节奏下的版本化文档与升级指南
 
-出现该行通常可判定插件已被 runtime 成功加载。
-
-### 3) 快速查看注入 agent 详情
-
-```bash
-opencode debug agent harness-init
-```
-
-若能看到 `prompt` 指向 `.../dist/builtin/agents/harness-init.md`，说明 agent 注入生效。
-
-### 4) 安全提示
-
-- `opencode debug config` 输出可能包含 provider 的 `apiKey`，请勿将完整输出直接贴到公开渠道。
-
-## 已知问题：sourceinstall 版本的 `@opencode-ai/plugin` 依赖告警
-
-在某些 sourceinstall 版本下，可能看到类似日志：
-
-- `No version matching "0.0.0-sourceinstall-..." found for specifier "@opencode-ai/plugin"`
-
-这通常是 OpenCode 在安装 `.opencode/package.json` 依赖时，将 `@opencode-ai/plugin` 锁到当前二进制版本号（例如 `0.0.0-sourceinstall-*`），而该版本并未发布到 npm registry 导致。
-
-影响评估：
-
-- 该告警默认是 `warn`，不阻断 file URL 插件加载。
-- 若你的 `debug config` 结果已包含本插件注入项（见上文自检项），可判定挂载仍然成功。
-
-建议修复（OpenCode 侧）：
-
-- 对 `0.0.0-*` 或 preview/sourceinstall 构建，安装 `@opencode-ai/plugin` 时使用 `*`/`latest`，不要使用不可发布的精确版本号。
-
-## Project layout
-
-- `src/index.ts`：插件入口（默认导出插件对象）
-- `src/handlers/config-handler.ts`：运行时注入与幂等 merge
-- `src/builtin/agents/harness-init.md`：主编排 agent 提示词
-- `src/builtin/skills/*`：内置技能文档
-- `src/builtin/templates/AGENTS.template.md`：AGENTS 写作模板（提示模板，不是渲染脚本）
-- `tests/opencode/unit/*`：单元与内容约束测试
-- `tests/opencode/e2e/*`：OpenCode CLI 黑盒测试（dist 挂载）
-- `tests/claude/e2e/*`：为后续 Claude E2E 预留
-
-## Development commands
+## Development Commands
 
 - `bun test`：运行测试
 - `bun run typecheck`：TypeScript 类型检查
-- `bun run build`：构建插件并打包内置资源
+- `bun run build`：构建两个 OpenCode 插件并打包内置资源
 
-### 运行 OpenCode dist E2E
+### Run OpenCode dist E2E
 
 必需环境变量：
 
@@ -182,8 +145,3 @@ opencode debug agent harness-init
 ```bash
 OPENCODE_CLI=/ABSOLUTE/PATH/TO/opencode bun test tests/opencode/e2e/opencode-dist-load.test.ts --timeout 180000
 ```
-
-## Notes
-
-- 本项目不注入自定义 tool，聚焦 `agent + skills` 注入
-- `AGENTS.md` 最终由 agent 按现场信息编写，不依赖模板渲染脚本

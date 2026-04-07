@@ -42,19 +42,19 @@ description: Initialize and manage AGENTS.md and harness documentation system wi
 ## 管理
 
 1. 管理阶段（初始化完成后）不再依赖 `.tmp/`；默认读取并增量维护根目录现有成品：`AGENTS.md`。
-2. 对 AGENTS.md 与 docs 目录执行持续治理：结构统一、状态同步、触发即更新。
+2. 对 AGENTS.md 与 docs 目录执行持续治理：结构统一、状态同步、触发即更新。请注意，若接手一个已经有其他结构的 AGENTS.md，在不改动它叙事逻辑的基础上，维护本技能要求的内容，**而不是完全删除与重编排该文件**
 3. 每次关键变更（环境、拓扑、协作规则）后，更新对应章节与状态源。
 4. 维护 `docs/issue/`、`docs/pr/`、`docs/ontology/`、`docs/superpowers/` 的目录一致性与索引可读性。
 5. 当模板与现实冲突时，以运行时事实为准，并在文档中标注差异处理结论。
 6. 管理阶段输入优先级：
-   - P0（权威事实）：根目录 `AGENTS.md`、`scripts/check-agent-env.sh`、`scripts/shell_source.sh`、`scripts/shell_env.json`、当前仓库 git 结构
-   - P1（参考约束）：模板文件（若可见）
+   - P0（权威事实）：根目录 `AGENTS.md`现状、`scripts/check-agent-env.sh`、`scripts/shell_source.sh`、`scripts/shell_env.json`、当前仓库 git 结构
+   - P1（参考章节）：模板文件 `src/builtin/templates/AGENTS.template.md | dist/builtin/templates/AGENTS.template.md` （若可见）
    - P2（历史初始化输入）：`.tmp/doc-input.json`（仅在存在时参考，不作为硬依赖）
 
 ## 输入与输出
 
 - 输入（初始化）：`.tmp/doc-input.json` + `src/builtin/templates/AGENTS.template.md | dist/builtin/templates/AGENTS.template.md`
-- 输入（管理）：根目录 `AGENTS.md`（必读）+ `scripts/check-agent-env.sh` + `scripts/shell_source.sh` + `scripts/shell_env.json` + docs/gittree 事实；`.tmp/` 仅在存在时参考
+- 输入（管理）：根目录 `AGENTS.md`（必读）+ `scripts/check-agent-env.sh` + `scripts/shell_source.sh` + `scripts/shell_env.json` + docs/gittree 事实+`src/builtin/templates/AGENTS.template.md | dist/builtin/templates/AGENTS.template.md`供结构性参考；`.tmp/` 仅在存在时参考
 - 输出：根目录 `AGENTS.md`
 
 注意：模板仅提供结构提示，不提供渲染脚本，最终文本由 agent 按现场上下文直接撰写。
