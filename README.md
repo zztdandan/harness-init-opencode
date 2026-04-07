@@ -3,7 +3,7 @@
 面向 **OpenCode** 的 harness 初始化与会话环境准备插件集合。项目当前提供两个插件：
 
 - `harness_init.js`：注入 `harness-init` 主 agent 与内置 skills。
-- `harness_shell_env_prepare_plugin.js`：在会话内准备 bash 前置环境（`session_env.json` + `shell_source.sh`）。
+- `harness_shell_env_prepare_plugin.js`：在会话内准备 shell 前置环境（`session_env.json` + `shell_source.sh`）。
 
 ## Two Plugins
 
@@ -18,6 +18,7 @@
 - 注入内置 skills 路径（`dist/builtin/skills`）
 - 默认注入 skill 权限：`harness-agent-env`、`harness-git-worktree`、`harness-docs`
 - 默认不抢占用户会话，不会把 `harness-init` 设为全局默认 agent
+- 本插件的设计哲学是，在插件进行过初始化后仅留下AGNETS.md，内含完善的
 
 ### 2) harness_shell_env_prepare_plugin（`dist/harness_shell_env_prepare_plugin.js`）
 
@@ -25,14 +26,15 @@
 
 - 在会话内一次性读取 `scripts/session_env.json`（要求 `schema = "harness-shell-env/v1"`）并缓存为 env
 - 通过 `shell.env` hook 将缓存 env 注入 shell 执行环境
-- 通过 `tool.execute.before` 仅改写 `bash` 工具命令，前置：
-  - `. "{worktree}/scripts/shell_source.sh" >/dev/null 2>&1 || true; <original_command>`
+- 若存在 `scripts/shell_source.sh`，注入 `BASH_ENV`，让 bash 在非交互执行时自动加载该脚本
+- 为 zsh 生成补救 shim：`scripts/.harness-zdotdir/.zshenv`，并注入 `ZDOTDIR` 指向该目录
 
 关键语义：
 
 - `session_env.json` 是会话级缓存快照（同会话内文件变更不会自动刷新）
-- `shell_source.sh` 每次 bash 调用都会重新 source（同会话内变更会生效）
-- source 失败不阻断原命令
+- `shell_source.sh` 存在才会注入 `BASH_ENV` / `ZDOTDIR`；不存在时仅注入 `session_env.json` 中的 env
+- `shell_source.sh` 在 bash 非交互启动阶段自动加载；脚本返回非 0 也不会阻断命令执行
+- zsh 通过 shim 中的 `|| true` 保证 source 失败不阻断后续命令
 
 ## Quick Start
 
@@ -84,21 +86,23 @@ bun run build
 以下限制来自当前 agent/skill 与插件实现事实：
 
 - `harness-init-plugin` 只负责注入 agent/skills，不注入自定义 tool。
-- `harness_shell_env_prepare_plugin` 当前仅对 `bash` 工具改写命令，不改写 `read/glob/grep` 等工具。
+- `harness_shell_env_prepare_plugin` 不再改写工具命令，统一通过 `shell.env` 注入环境变量。
 - `session_env.json` 必须是对象结构，且满足 schema：`harness-shell-env/v1`；非法键会被过滤。
 - 环境变量键名仅接受：`[A-Za-z_][A-Za-z0-9_]*`。
+- zsh 兼容依赖插件在 `scripts/.harness-zdotdir/.zshenv` 成功落盘；若写入失败，将只保留 `BASH_ENV` 注入。
 - `harness-agent-env` / `harness-docs` 的技能文档当前仍描述 `scripts/shell_env.json`，与新插件使用的 `scripts/session_env.json` 存在命名差异；实际运行请以插件实现为准。
 - `harness-init` 设计中包含 Gate A/Gate B 门禁与文档/拓扑治理流程，不适合在未确认主管理项目目录时强行执行。
 
-## Version 0.1.0
+## Version 0.1.1
 
-当前版本：`0.1.0`
+当前版本：`0.1.1`
 
 已具备能力：
 
 - 双插件分离交付：初始化治理与会话环境前置解耦
 - dist 双入口构建：`harness_init.js` + `harness_shell_env_prepare_plugin.js`
-- 会话级 env 缓存 + 每次 bash source 前置
+- 会话级 env 缓存 + `BASH_ENV` 自动加载 `shell_source.sh`
+- zsh shim（`ZDOTDIR + .zshenv`）补救机制
 - shell 前置失败降级（不中断命令）
 - 单元与 e2e 覆盖核心加载与行为语义
 
@@ -108,10 +112,10 @@ bun run build
   - 交付双插件架构
   - 打通 OpenCode dist 挂载与核心测试
 
-- `0.1.1`（计划）
-  - 对齐 skill 文档中的 `shell_env.json` / `session_env.json` 命名
-  - 增加更明确的插件组合示例与迁移说明
-  - 补充针对会话缓存语义的 e2e 固化用例
+- `0.1.1`（已实现）
+  - 移除 `tool.execute.before` 命令改写，改为 `shell.env` 统一注入
+  - 新增 `BASH_ENV` 自动加载 `scripts/shell_source.sh`
+  - 新增 zsh 补救注入（`ZDOTDIR` + `.zshenv` shim）
 
 - `0.2.0`（计划）
   - 增强环境资产 schema 校验与错误可观测性

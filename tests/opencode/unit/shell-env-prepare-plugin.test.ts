@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises"
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises"
 import path, { join } from "node:path"
 import { tmpdir } from "node:os"
 
@@ -106,7 +106,7 @@ describe("harness shell env prepare plugin", () => {
     expect(plugin.name).toBe("harness_shell_env_prepare_plugin")
     expect(typeof plugin.event).toBe("function")
     expect(typeof plugin["shell.env"]).toBe("function")
-    expect(typeof plugin["tool.execute.before"]).toBe("function")
+    expect("tool.execute.before" in plugin).toBeFalse()
   })
 
   test("shell.env uses session cache snapshot only", async () => {
@@ -139,32 +139,52 @@ describe("harness shell env prepare plugin", () => {
     })
   })
 
-  test("tool.execute.before only rewrites bash command", async () => {
+  test("shell.env injects BASH_ENV and ZDOTDIR when shell source exists", async () => {
     await withTempWorkspace(async (workspace) => {
       const scriptsDir = path.join(workspace, "scripts")
       await mkdir(scriptsDir, { recursive: true })
       await writeFile(
         path.join(scriptsDir, "session_env.json"),
-        JSON.stringify({ schema: SESSION_ENV_SCHEMA, env: {} }),
+        JSON.stringify({ schema: SESSION_ENV_SCHEMA, env: { KEEP: "ok" } }),
+        "utf8",
+      )
+      await writeFile(path.join(scriptsDir, "shell_source.sh"), "return 1\n", "utf8")
+
+      const plugin = createHarnessShellEnvPreparePlugin({ worktreeRoot: workspace })
+      await plugin.event?.({ event: "session.created" }, {})
+
+      const output: Record<string, any> = {}
+      await plugin["shell.env"]?.({}, output)
+
+      expect(output.env).toMatchObject({
+        KEEP: "ok",
+        BASH_ENV: join(workspace, "scripts/shell_source.sh"),
+        ZDOTDIR: join(workspace, "scripts/.harness-zdotdir"),
+      })
+
+      const zshenvPath = join(workspace, "scripts/.harness-zdotdir/.zshenv")
+      const zshenv = await readFile(zshenvPath, "utf8")
+      expect(zshenv).toContain('|| true')
+      expect(zshenv).toContain(join(workspace, "scripts/shell_source.sh"))
+    })
+  })
+
+  test("shell.env does not inject bootstrap env when shell source is missing", async () => {
+    await withTempWorkspace(async (workspace) => {
+      const scriptsDir = path.join(workspace, "scripts")
+      await mkdir(scriptsDir, { recursive: true })
+      await writeFile(
+        path.join(scriptsDir, "session_env.json"),
+        JSON.stringify({ schema: SESSION_ENV_SCHEMA, env: { ONLY_JSON: "1" } }),
         "utf8",
       )
 
       const plugin = createHarnessShellEnvPreparePlugin({ worktreeRoot: workspace })
       await plugin.event?.({ event: "session.created" }, {})
 
-      const bashInput: Record<string, any> = { tool: "bash" }
-      const beforeOutput: Record<string, any> = { args: { command: "pwd" } }
-      await plugin["tool.execute.before"]?.(bashInput, beforeOutput)
-
-      expect(beforeOutput.args.command).toContain("|| true; pwd")
-      expect(beforeOutput.args.command).toContain(
-        `. "${join(workspace, "scripts/shell_source.sh")}" >/dev/null 2>&1`,
-      )
-
-      const nonBashInput: Record<string, any> = { tool: "read" }
-      const nonBashOutput: Record<string, any> = { args: { command: "pwd" } }
-      await plugin["tool.execute.before"]?.(nonBashInput, nonBashOutput)
-      expect(nonBashOutput.args.command).toBe("pwd")
+      const output: Record<string, any> = {}
+      await plugin["shell.env"]?.({}, output)
+      expect(output.env).toEqual({ ONLY_JSON: "1" })
     })
   })
 })
