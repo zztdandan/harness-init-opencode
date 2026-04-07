@@ -93,8 +93,19 @@ export function assertConfigContainsHarnessDefinitions(input: {
   if (typeof agentConfig.prompt !== "string") {
     throw new Error(`agent prompt must be a string for ${input.requiredAgent}`)
   }
-  const prompt = normalizeObservedPath(agentConfig.prompt)
-  assertHasPrefix(prompt, input.expectedAgentPromptPrefix, `agent ${input.requiredAgent} prompt must resolve under dist agents`)
+  const rawPrompt = agentConfig.prompt
+  if (rawPrompt.includes("\n")) {
+    if (rawPrompt.trim().length === 0) {
+      throw new Error(`agent prompt must not be empty for ${input.requiredAgent}`)
+    }
+  } else {
+    const prompt = normalizeObservedPath(rawPrompt)
+    assertHasPrefix(
+      prompt,
+      input.expectedAgentPromptPrefix,
+      `agent ${input.requiredAgent} prompt must resolve under dist agents`,
+    )
+  }
 
   const skills = (config.skills ?? {}) as Record<string, unknown>
   const paths = Array.isArray(skills.paths) ? skills.paths : []

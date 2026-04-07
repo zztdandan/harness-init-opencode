@@ -29,7 +29,7 @@ describe("builtin prompt assets", () => {
       "src/builtin/skills/harness-agent-env/reference/check-output/ENV_CHECK_OUTPUT_SPEC.md",
     )
 
-    expect(env.includes("uv -> venv -> python")).toBe(true)
+    expect(env.includes("uv -> conda -> venv -> python -> python3")).toBe(true)
     expect(env.includes("守则")).toBe(true)
     expect(env.includes("reference/go/GO_ENV_REFERENCE.md")).toBe(true)
     expect(env.includes("reference/check-output/ENV_CHECK_OUTPUT_SPEC.md")).toBe(
@@ -37,7 +37,7 @@ describe("builtin prompt assets", () => {
     )
     expect(env.includes("command")).toBe(true)
     expect(mainOutputSpec.includes("stdout 必须为 TOML")).toBe(true)
-    expect(mainOutputSpec.includes("[shell_env]")).toBe(true)
+    expect(mainOutputSpec.includes("[shell_env]")).toBe(false)
     expect(mainOutputSpec.includes("[shell_env.vars]")).toBe(true)
     expect(repo.includes("submodule")).toBe(true)
     expect(repo.includes(".worktrees/")).toBe(true)

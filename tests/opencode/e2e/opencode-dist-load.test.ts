@@ -99,6 +99,15 @@ describe("opencode dist e2e runtime", () => {
     if (!fs.existsSync(distPluginEntryJs)) {
       throw new Error(`build completed but dist plugin entry is missing: ${distPluginEntryJs}`)
     }
+    const distShellPrepareEntryJs = path.join(
+      REPO_ROOT,
+      "dist/harness_shell_env_prepare_plugin.js",
+    )
+    if (!fs.existsSync(distShellPrepareEntryJs)) {
+      throw new Error(
+        `build completed but shell env prepare entry is missing: ${distShellPrepareEntryJs}`,
+      )
+    }
 
     const workspace = prepareWorkspace({
       caseId: CASE_ID,
