@@ -28,6 +28,11 @@ Go 启用时，`check-agent-env.sh` 的输出补充要求见：
 3. 使用参考脚本中的工具相关脚本，检测及补充 go 工具的安装（工具安装前需临时设置好所有环境，根据上个步骤的最后探测结果）
 4. 若没有特殊要求，跳过增补维护`scripts/shell_source.sh`：go的几乎所有参数均通过环境变量配置，若用户没有特殊要求，这个脚本没有 go相关配置需要维护
 5. `scripts/check-agent-env.sh`：根据 `check-output/ENV_CHECK_OUTPUT_SPEC.md` 的规范编写探测脚本，输出 Go 环境的探测结果
+   - 在编写/维护脚本阶段，必须先探索并固化两个目录：
+     - `GOBIN`（如 `${GOPATH}/bin`）
+     - `GOTOOLDIR`（通常 `${GOROOT}/pkg/tool/${GOOS}_${GOARCH}`）
+   - 基于上述目录生成“Go 工具清单 + 探测方式”到脚本内（或等价的静态配置），会话运行时只执行清单里的探测语句，不再重新枚举目录。
+   - 输出至少包括每个工具的 `command` 与 `version`；不支持版本输出的工具使用 `probe=exists` 并按补充输出规范格式化。
 6. 在 harness 工作区的 AGENTS.md 中，无需为 go语言维护额外文字及段落，遵从主规范的维护即可
 7. 由于主流程中已经存在 运行`scripts/check-agent-env.sh`的相关流程，go环境维护仅需确认额外的go环境结果是否正确即可
 
@@ -62,6 +67,19 @@ find ~ -maxdepth 6 -type f -path '*/bin/go' 2>/dev/null
 ```bash
 command -v gopls goimports golangci-lint dlv 2>/dev/null
 ```
+
+6. **定位 Go 工具目录（GOTOOLDIR）**：
+```bash
+go env GOTOOLDIR GOOS GOARCH
+```
+
+7. **维护阶段枚举并固化工具清单（仅在维护阶段执行）**：
+```bash
+ls -1 "${GOBIN}"
+ls -1 "${GOTOOLDIR}"
+```
+
+说明：会话执行 `check-agent-env.sh` 时，不应再次通过 `ls/find/type -a` 做目录发现；只运行已固化工具清单对应的探测命令。
 
 **版本选择规则**：
 - Go 1.20 项目：选择 `go version` 输出以 `go1.20` 开头的 Go 二进制
@@ -123,6 +141,29 @@ bash scripts/install_go124_tools.sh [goroot] [gopath] [gobin]
 - `GOMODCACHE`：脚本未显式导出，沿用 Go 默认值（通常为 `${GOPATH}/pkg/mod`）
 
 **补充约定**：`GOPRIVATE`、`GONOPROXY`、`GONOSUMDB` 默认为 `gitlab-c7n.lgdxtech.com`。仅当用户明确要求其他私有模块域名或代理策略时，Agent 才在 `scripts/shell_env.json`中设置其他值
+
+**强制校验**: 必须在 `shell_env.json` 中显式维护上述所有缺省环境变量，不得使用系统默认参数，要求在 `scripts/check-agent-env.sh` 中`[shell_env.vars]`成功打出这些环境变量(这部分的打印不是读取环境变量而是显式读取 `shell_env.json`kv的 )方算生效
+
+## Go 工具清单固化规则（新增）
+
+为保证会话首轮可直接获得 Go 工具状态，`check-agent-env.sh` 在 Go 场景下必须遵循以下规则：
+
+1. 维护阶段一次性完成工具发现，并固化为脚本中的静态清单（或等价静态数据结构）。
+2. 工具来源分两类：
+   - `gobin`：用户安装工具（如 `gopls`、`goimports`、`golangci-lint`、`dlv`，以及其他已安装工具）
+   - `gotooldir`：Go toolchain 工具（如 `compile`、`link`、`vet`、`cover` 等）
+3. 每个工具必须预定义：
+   - `command`（短命令或绝对路径）
+   - `probe`（`version` 或 `exists`）
+4. 会话执行阶段仅允许按清单执行探测，不允许动态扩展清单。
+5. 输出格式遵循 `check-output/ENV_CHECK_OUTPUT_SPEC.md` 的 `go.tools.*` 结构，确保每项均有 `command` 与 `version` 字段。
+
+### 推荐探测命令模板
+
+- `probe=version`：优先 `<command> version`，其次 `<command> --version`
+- `probe=exists`：仅检测可执行文件存在与可执行权限（`-x`）
+
+探测失败统一写 `version = "unavailable"`，并继续输出其他工具结果。
 
 ## 重要规则
 

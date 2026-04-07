@@ -97,6 +97,7 @@ description: Initialize and continuously manage harness workspace runtime bootst
 2. 允许定义函数、PATH 组装、shell helper，以及用户要求的其他逻辑
 3. 保持可重复 source 的幂等性
 4. 不承担探测报告输出职责
+5. 该脚本**不得**承担对`scripts/shell_env.json` 的解析和 export 工作，而将这个工作交由 agent的自动化 hook完成
 
 ## check-agent-env 约定与编写指南
 
@@ -112,6 +113,7 @@ description: Initialize and continuously manage harness workspace runtime bootst
 4. 若已在 PATH 中，`command` 直接写短命令；否则写绝对路径
 5. 必须新增输出 `shell_env` 段，打印 `scripts/shell_env.json` 中全部设定变量
 6. 不输出建议、安装提示、冗余日志
+7. 该脚本**不进行**任何环境变量的export，或环境切换操作，仅是环境结果的校验
 
 脚本的 stdio输出规范与示例见：
 
@@ -119,7 +121,13 @@ description: Initialize and continuously manage harness workspace runtime bootst
 
 ### `check-agent-env` 伪代码
 
-下面给出的是“按已选定结果生成脚本”的模板化伪代码，重点是**基于前置探测事实做校验**，不是重新探测或回退。伪代码仅供参考，实际脚本按照当时情况实际进行
+下面给出的是“按已选定结果生成脚本”的模板化伪代码，重点是**基于前置探测事实做校验**，不是重新探测或回退。伪代码仅供参考，实际脚本按照当时情况实际进行。
+
+关键语义（强制）：
+
+- 下述 `if/else` 与 `resolve_*` 属于“维护/编写阶段”的生成逻辑，不是 `check-agent-env.sh` 运行时逻辑。
+- 最终生成后的 `check-agent-env.sh` 必须是“单一路径校验脚本”：只包含已选中事实对应的探测语句。
+- 例如已选 `python.selected=uv` 时，脚本运行期只能执行 `uv --version`（或等价既定命令），不得再出现 `python/python3/conda/.venv/bin/python` 的存在性判断或候补分支。
 
 #### 总体模板
 
@@ -157,13 +165,19 @@ main:
 - `selected` 必须来自本技能允许值（例如 Python: `uv|conda|venv|python|python3`）
 - `command.detected` 必须可映射为“短命令或绝对路径”输出语义
 
-#### 路径处理模板（核心）
+执行期禁止项（强制）：
+
+- 禁止在 `check-agent-env.sh` 运行期做候补探测（例如“bun 不存在就改查 node”）。
+- 禁止在 `check-agent-env.sh` 运行期做多候选存在性枚举（例如 `command -v bun node`、`type -a`、`which`、`find`）。
+- 禁止在 `check-agent-env.sh` 运行期改写“已选中事实”（`selected` 与 `command`）。
+
+#### 路径处理模板（核心，维护阶段）
 
 ```text
-resolve_command_for_output({detected_command}):
+resolve_command_for_output_in_generation({detected_command}):
   # {detected_command} 可能是："uv"、"node"、"bash"、".venv/bin/python"、"/abs/path/python"
 
-  若 {detected_command} 在 PATH 中可直接调用:
+  若维护阶段确认 {detected_command} 在 PATH 中可直接调用:
     command_output = 对应短命令
     # 例如 detected 是 "/usr/bin/node" 且 PATH 可找到 node，则输出 "node"
 
@@ -180,6 +194,7 @@ resolve_command_for_output({detected_command}):
 - 即使实际校验时调用的是 `{workspace}/.venv/bin/python`，若该命令不在 PATH，输出也应是绝对路径。
 - 更建议设置一些环境变量代替长绝对路径，使得命令路径是环境变量+短路径的结合体，甚至利用 source 脚本定义别名函数等方式让输出更简洁（例如输出 `python`，但实际执行时通过环境变量或 source 脚本让 `python` 实际调用到 `/home/base/repo/<project>/.venv/bin/python`）
 - 全程只围绕前面探测结论里的 `{detected_command}` 做校验，不新增候补命令。
+- 上述路径归一化在维护阶段完成；最终 `check-agent-env.sh` 运行时直接使用已固化的 `command` 与探测语句。
 
 #### Python 段模板（按已选结果分支）
 
@@ -298,6 +313,11 @@ write_extra_section_from_fact({lang.name}, {lang.selected}, {lang.command.detect
 
 补充语言字段名与附加约束优先服从各自 reference；但“只校验既定事实、单语言失败不提前退出、无冗余日志”不变。
 
+额外强约束（执行期）：
+
+- 最终脚本中每个语言段只能有一个既定入口探测语句（`<detected_command> <version_arg>`）。
+- 不允许在运行期基于“命令是否存在”切换到其他入口。
+
 #### `shell_env` 段模板
 
 ```text
@@ -346,6 +366,8 @@ Go 对 check 输出行为的补充约束全部下沉至 reference，且仅在需
 
 Go check 输出规范是对主规范的补充，不替代主规范。
 
+补充约束：Go 场景下，agent 在维护 `check-agent-env.sh` 时必须先完成 `GOBIN/GOTOOLDIR` 工具清单固化，再按固化清单输出 `go.tools.*`（每项包含 `command` 与 `version`），会话运行阶段不再做目录枚举发现。
+
 ## AGENTS.md 集成（固定段落）
 说明：本段是给“harness 初始化完成后、在该工作区内运行的业务 agent”使用的运行约束，不用于限制 `harness-init` agent 在维护本技能资产时的实现动作。
 
@@ -355,13 +377,14 @@ Go check 输出规范是对主规范的补充，不替代主规范。
 ```markdown
 ### 会话启动一次性环境校验（每轮对话仅一次）
 
-每轮对话启动时，**仅执行一次以下步骤**：
+每个上下文session中，**仅执行一次以下步骤**：
 
 执行环境校验脚本：`bash scripts/check-agent-env.sh`
 
 约束：
 - `scripts/shell_source.sh` 与 `scripts/shell_env.json` 影响 bash 前置行为，仅允许通过 `harness-agent-env` 维护。
 - 若缺失 `harness-agent-env` 管理，不允许agent修改这两个前置资产。不要求业务 agent 在会话中显式执行或显式说明其调用细节。
+- 不允许agent主动使用 bash 工具 调用 `scripts/shell_source.sh` 与 `scripts/shell_env.json` 资产 ，必须由agent运行时自动注入
 ```
 
 ## 输出结构（.tmp/env.json）

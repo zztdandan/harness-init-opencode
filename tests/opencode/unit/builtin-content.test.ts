@@ -25,6 +25,9 @@ describe("builtin prompt assets", () => {
     const goRef = read(
       "src/builtin/skills/harness-agent-env/reference/go/GO_ENV_REFERENCE.md",
     )
+    const goOutputSpec = read(
+      "src/builtin/skills/harness-agent-env/reference/go/check-output/ENV_CHECK_OUTPUT_SPEC.md",
+    )
     const mainOutputSpec = read(
       "src/builtin/skills/harness-agent-env/reference/check-output/ENV_CHECK_OUTPUT_SPEC.md",
     )
@@ -46,7 +49,11 @@ describe("builtin prompt assets", () => {
     expect(doc.includes("Project Tree & Task Status")).toBe(true)
     expect(goRef.includes("switch_go120.sh")).toBe(true)
     expect(goRef.includes("install_go124_tools.sh")).toBe(true)
+    expect(goRef.includes("GOTOOLDIR")).toBe(true)
+    expect(goRef.includes("工具清单固化规则")).toBe(true)
     expect(goRef.includes("check-output/ENV_CHECK_OUTPUT_SPEC.md")).toBe(true)
+    expect(goOutputSpec.includes("[go.tools.gopls]")).toBe(true)
+    expect(goOutputSpec.includes("probe = \"version\"")).toBe(true)
     expect(mainOutputSpec.includes("[python]")).toBe(true)
     expect(mainOutputSpec.includes("\n[go]\n")).toBe(false)
   })
