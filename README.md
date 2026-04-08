@@ -90,7 +90,7 @@ bun run build
 - `session_env.json` 必须是对象结构，且满足 schema：`harness-shell-env/v1`；非法键会被过滤。
 - 环境变量键名仅接受：`[A-Za-z_][A-Za-z0-9_]*`。
 - zsh 兼容依赖插件在 `scripts/.harness-zdotdir/.zshenv` 成功落盘；若写入失败，将只保留 `BASH_ENV` 注入。
-- `harness-agent-env` / `harness-docs` 的技能文档当前仍描述 `scripts/shell_env.json`，与新插件使用的 `scripts/session_env.json` 存在命名差异；实际运行请以插件实现为准。
+- `harness-agent-env` / `harness-docs` / `AGENTS.template` 已统一收敛为 `scripts/session_env.json` 语义，不再使用 `scripts/shell_env.json` 命名。
 - `harness-init` 设计中包含 Gate A/Gate B 门禁与文档/拓扑治理流程，不适合在未确认主管理项目目录时强行执行。
 
 ## Version 0.1.1

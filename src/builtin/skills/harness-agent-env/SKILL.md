@@ -1,6 +1,6 @@
 ---
 name: harness-agent-env
-description: Initialize and continuously manage harness workspace runtime bootstrap assets. Use this skill whenever user mentions agent environment/runtime setup, session bootstrap, check-agent-env.sh, shell_source.sh, shell_env.json, AGENTS.md session start checks, uv/venv/python, bun/node, bash/zsh selection, or Go 1.20/1.24 environment prep.
+description: Initialize and continuously manage harness workspace runtime bootstrap assets. Use this skill whenever user mentions agent environment/runtime setup, session bootstrap, check-agent-env.sh, shell_source.sh, session_env.json, AGENTS.md session start checks, uv/venv/python, bun/node, bash/zsh selection, or Go 1.20/1.24 environment prep.
 ---
 
 # harness-agent-env
@@ -11,7 +11,7 @@ description: Initialize and continuously manage harness workspace runtime bootst
 
 1. `scripts/check-agent-env.sh`
 2. `scripts/shell_source.sh`
-3. `scripts/shell_env.json`
+3. `scripts/session_env.json`
 
 补充：`AGENTS.md` 相关固定文本以“## AGENTS.md 集成（固定段落）”为唯一规范来源；其他章节仅引用，不重复展开。
 
@@ -26,7 +26,7 @@ description: Initialize and continuously manage harness workspace runtime bootst
 必须完成：
 
 1. 环境探测（Python → JavaScript → Shell）
-2. 生成/写入三类资产：`scripts/check-agent-env.sh`、`scripts/shell_source.sh`、`scripts/shell_env.json`
+2. 生成/写入三类资产：`scripts/check-agent-env.sh`、`scripts/shell_source.sh`、`scripts/session_env.json`
 3. 在 `AGENTS.md` 注入固定启动段落（按“AGENTS.md 集成（固定段落）”逐字写入）
 4. 写入 `.tmp/env.json`（初始化阶段必须写）
 
@@ -51,29 +51,29 @@ description: Initialize and continuously manage harness workspace runtime bootst
 
 即优先探测更现代的工具链（如 uv、bun、bash），若不可用再探测传统选项（conda、venv、node、zsh），最后才是系统默认（python/python3）。
 
-说明：`check-agent-env.sh` 是探测环境后的验证及 stdio 输出环境情况的脚本，并不是探测脚本，只输出“初始化或重做阶段已选定链路 + shell_env.json 已设定环境变量”。
+说明：`check-agent-env.sh` 是探测环境后的验证及 stdio 输出环境情况的脚本，并不是探测脚本，只输出“初始化或重做阶段已选定链路 + session_env.json 已设定环境变量”。
 
 ## 技能工作流程
 
-1. 由 agent 根据技能提示，完成语言环境探测后，维护 `shell_source.sh`、`shell_env.json` 与 `check-agent-env.sh` 三类资产：
+1. 由 agent 根据技能提示，完成语言环境探测后，维护 `shell_source.sh`、`session_env.json` 与 `check-agent-env.sh` 三类资产：
 
-  - `scripts/shell_env.json`：维护 bash 工具自动注入的环境变量键值
+  - `scripts/session_env.json`：维护 bash 工具自动注入的环境变量键值
   - `scripts/shell_source.sh`：维护 bash 工具执行前自动 `source` 的脚本逻辑（例如函数定义、PATH 拼接、辅助别名）
-  - `scripts/check-agent-env.sh`：每 session 输出语言环境事实，并附带 `shell_env.json` 设定变量清单（TOML），维护及编写规范见下文
+  - `scripts/check-agent-env.sh`：每 session 输出语言环境事实，并附带 `session_env.json` 设定变量清单（TOML），维护及编写规范见下文
 
 2. 在 harness 工作区的 AGENTS.md 中，维护固定段落（内容来源仅限“AGENTS.md 集成（固定段落）”）。
 3. 维护完成后，执行 `check-agent-env.sh` 做最终校验，确认输出与规范一致；若不一致则回到第 1 步继续收敛。
 
 
-## shell_source 与 shell_env 约定
+## shell_source 与 session_env 约定
 
-### `scripts/shell_env.json`
+### `scripts/session_env.json`
 
 固定职责：
 
 1. 只维护“bash 工具自动注入”的环境变量映射
 2. 键为环境变量名，值为字符串
-3. 与 `check-agent-env.sh` 输出中的 `shell_env` 段保持一致
+3. 与 `check-agent-env.sh` 输出中的 `session_env` 段保持一致
 4. 禁止混入探测日志、说明文本、注释字段
 
 额外编写与维护规范：
@@ -97,7 +97,7 @@ description: Initialize and continuously manage harness workspace runtime bootst
 2. 允许定义函数、PATH 组装、shell helper，以及用户要求的其他逻辑
 3. 保持可重复 source 的幂等性
 4. 不承担探测报告输出职责
-5. 该脚本**不得**承担对`scripts/shell_env.json` 的解析和 export 工作，而将这个工作交由 agent的自动化 hook完成
+5. 该脚本**不得**承担对`scripts/session_env.json` 的解析和 export 工作，而将这个工作交由 agent 的自动化 hook 完成
 
 ## check-agent-env 约定与编写指南
 
@@ -108,10 +108,10 @@ description: Initialize and continuously manage harness workspace runtime bootst
 固定要求：
 
 1. 仅检测已选中语言环境的工具链（Python/Javascripts/Shell/补充语言）及版本信息，比如已经选择了 uv 就不再在脚本中检测 python python3 .venv/bin/python 等
-2. 在默认 bash 前置机制已生效的前提下输出结果，即结果需体现 `scripts/shell_env.json` 注入后的环境变量，以及 `scripts/shell_source.sh` source 后的可用状态
+2. 在默认 bash 前置机制已生效的前提下输出结果，即结果需体现 `scripts/session_env.json` 注入后的环境变量，以及 `scripts/shell_source.sh` source 后的可用状态
 3. `command` 可以是短命令或绝对路径，不带参数
 4. 若已在 PATH 中，`command` 直接写短命令；否则写绝对路径
-5. 必须新增输出 `shell_env` 段，打印 `scripts/shell_env.json` 中全部设定变量
+5. 必须新增输出 `session_env` 段，打印 `scripts/session_env.json` 中全部设定变量
 6. 不输出建议、安装提示、冗余日志
 7. 该脚本**不进行**任何环境变量的export，或环境切换操作，仅是环境结果的校验
 
@@ -133,9 +133,9 @@ description: Initialize and continuously manage harness workspace runtime bootst
 
 ```text
 main:
-  读取 {workspace}/scripts/shell_env.json
+  读取 {workspace}/scripts/session_env.json
   若缺失 / 不可读 / 非简单 KV JSON:
-    stderr: "shell_env.json invalid"
+    stderr: "session_env.json invalid"
     exit 1
 
   读取已选中事实（示意）：
@@ -153,9 +153,9 @@ main:
     write_shell_section_from_fact(...)
     write_extra_sections_from_fact(...)
 
-  写入 [shell_env.vars]（原样回显 shell_env.json 全量键值）
+  写入 [session_env.vars]（原样回显 session_env.json 全量键值）
   stdout 一次性输出 TOML
-  仅在脚本本身异常（例如 shell_env.json 非法）时非 0 退出；
+  仅在脚本本身异常（例如 session_env.json 非法）时非 0 退出；
   单一语言不可用时仍输出完整结果并 0 退出
 ```
 
@@ -360,16 +360,16 @@ write_extra_section_from_fact({lang.name}, {lang.selected}, {lang.command.detect
 - 最终脚本中每个语言段只能有一个既定入口探测语句（`<detected_command> <version_arg>`）。
 - 不允许在运行期基于“命令是否存在”切换到其他入口。
 
-#### `shell_env` 段模板
+#### `session_env` 段模板
 
 ```text
-write_shell_env_vars({shell_env_json_object}):
-  写 [shell_env.vars]
+write_session_env_vars({session_env_json_object}):
+  写 [session_env.vars]
   对每个 {key, value}:
     写 {key} = "{toml_escaped(value)}"
 ```
 
-这里回显的是 `scripts/shell_env.json` 的设定值，不做推导、不补字段、不漏字段。
+这里回显的是 `scripts/session_env.json` 的设定值，不做推导、不补字段、不漏字段。
 
 #### 典型事实组合示例（模板思路）
 
@@ -386,7 +386,7 @@ write_shell_env_vars({shell_env_json_object}):
 - 单一语言环境检测失败时，不提前退出；继续完成其余语言段并输出完整 TOML。
 - 语言不可用信息应体现在对应语言段字段值中，不输出冗余提示文本。
 - 注意将 agent 是否继续执行后续任务的自主权交给 agent 与用户判断。
-- 若 `scripts/shell_env.json` 缺失或格式错误，应直接报错并非 0 退出。
+- 若 `scripts/session_env.json` 缺失或格式错误，应直接报错并非 0 退出。
 
 
 ## 补充其他语言环境规范
@@ -424,9 +424,9 @@ Go check 输出规范是对主规范的补充，不替代主规范。
 执行环境校验脚本：`bash scripts/check-agent-env.sh`
 
 约束：
-- `scripts/shell_source.sh` 与 `scripts/shell_env.json` 影响 bash 前置行为，仅允许通过 `harness-agent-env` 维护。
+- `scripts/shell_source.sh` 与 `scripts/session_env.json` 影响 bash 前置行为，仅允许通过 `harness-agent-env` 维护。
 - 若缺失 `harness-agent-env` 管理，不允许agent修改这两个前置资产。不要求业务 agent 在会话中显式执行或显式说明其调用细节。
-- 不允许agent主动使用 bash 工具 调用 `scripts/shell_source.sh` 与 `scripts/shell_env.json` 资产 ，必须由agent运行时自动注入
+- 不允许agent主动使用 bash 工具 调用 `scripts/shell_source.sh` 与 `scripts/session_env.json` 资产 ，必须由agent运行时自动注入
 ```
 
 ## 校验说明（强制）
@@ -445,6 +445,6 @@ Go check 输出规范是对主规范的补充，不替代主规范。
 - 探测顺序与命中结果
 - missing 列表
 - Go（若触发）版本/关键路径/来源
-- `scripts.check`、`scripts.shell_source`、`scripts.shell_env` 路径
+- `scripts.check`、`scripts.shell_source`、`scripts.session_env` 路径
 - `phase`（bootstrap/manage）
 - `timestamp`

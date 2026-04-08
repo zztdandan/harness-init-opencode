@@ -50,8 +50,8 @@ command = "/home/base/.gvm/gos/go1.24.1/pkg/tool/linux_amd64/compile"
 probe = "exists"
 version = "exists"
 
-[shell_env.vars]
-# 所有 Go 环境设定已维护在 shell_env.json 中，会一起输出
+[session_env.vars]
+# 所有 Go 环境设定已维护在 session_env.json 中，会一起输出
 ```
 
 说明：
