@@ -13,7 +13,7 @@ description: Initialize and continuously manage harness workspace runtime bootst
 2. `scripts/shell_source.sh`
 3. `scripts/shell_env.json`
 
-补充：`AGENTS.md` 仅维护会话启动校验入口与前置约束，不再维护 `shell_source.sh` / `shell_env.json` 的显式执行步骤。
+补充：`AGENTS.md` 相关固定文本以“## AGENTS.md 集成（固定段落）”为唯一规范来源；其他章节仅引用，不重复展开。
 
 
 
@@ -27,7 +27,7 @@ description: Initialize and continuously manage harness workspace runtime bootst
 
 1. 环境探测（Python → JavaScript → Shell）
 2. 生成/写入三类资产：`scripts/check-agent-env.sh`、`scripts/shell_source.sh`、`scripts/shell_env.json`
-3. 在 `AGENTS.md` 注入固定启动段落（仅保留校验入口和前置约束）
+3. 在 `AGENTS.md` 注入固定启动段落（按“AGENTS.md 集成（固定段落）”逐字写入）
 4. 写入 `.tmp/env.json`（初始化阶段必须写）
 
 ### 2) 管理（已有项目规整）
@@ -37,7 +37,7 @@ description: Initialize and continuously manage harness workspace runtime bootst
 必须完成：
 
 1. 复核三类资产与当前事实是否一致
-2. 增量修改资产和 AGENTS.md 固定段落
+2. 增量修改资产和 AGENTS.md 固定段落（固定段落仍以“AGENTS.md 集成（固定段落）”为唯一文本源）
 3. 是否写 `.tmp/env.json` 由模型判断（可写可不写），但若写入则必须与当前事实一致
 
 ## 基础环境探测规范
@@ -61,7 +61,7 @@ description: Initialize and continuously manage harness workspace runtime bootst
   - `scripts/shell_source.sh`：维护 bash 工具执行前自动 `source` 的脚本逻辑（例如函数定义、PATH 拼接、辅助别名）
   - `scripts/check-agent-env.sh`：每 session 输出语言环境事实，并附带 `shell_env.json` 设定变量清单（TOML），维护及编写规范见下文
 
-2. 在 harness 工作区的 AGENTS.md 中，维护固定段落：会话只跑校验脚本，且声明上述其他两个前置资产受 `harness-agent-env` 管理。
+2. 在 harness 工作区的 AGENTS.md 中，维护固定段落（内容来源仅限“AGENTS.md 集成（固定段落）”）。
 3. 维护完成后，执行 `check-agent-env.sh` 做最终校验，确认输出与规范一致；若不一致则回到第 1 步继续收敛。
 
 
@@ -196,55 +196,77 @@ resolve_command_for_output_in_generation({detected_command}):
 - 全程只围绕前面探测结论里的 `{detected_command}` 做校验，不新增候补命令。
 - 上述路径归一化在维护阶段完成；最终 `check-agent-env.sh` 运行时直接使用已固化的 `command` 与探测语句。
 
-#### Python 段模板（按已选结果分支）
+#### Python 段模板（按 selected 拆分，单模板单入口）
+
+使用规则（强制）：
+
+- 维护时先确定 `python.selected`，然后只使用对应的单一模板。
+- 禁止写成 `if/else if` 多分支运行时逻辑。
+
+**模板 A：`python.selected = "uv"`**
 
 ```text
-write_python_section_from_fact({python.selected}, {python.command.detected}):
-  if {python.selected} == "uv":
-    执行 {python.version_probe = "{python.command.detected} --version"}
-    若失败则标记该语言 unavailable，并继续后续语言段写入
-    {python.command.output} = resolve_command_for_output({python.command.detected})
-    写 [python]
-    写 selected = "uv"
-    写 command = {python.command.output}
-    写 version = {python.version.stdout_raw}
+write_python_section_for_uv({python.command.detected}):
+  执行 {python.version_probe = "{python.command.detected} --version"}
+  若失败则标记该语言 unavailable，并继续后续语言段写入
+  {python.command.output} = resolve_command_for_output({python.command.detected})
+  写 [python]
+  写 selected = "uv"
+  写 command = {python.command.output}
+  写 version = {python.version.stdout_raw}
+```
 
-  else if {python.selected} == "conda":
-    执行 {python.version_probe = "{python.command.detected} --version"}
-    若失败则标记该语言 unavailable，并继续后续语言段写入
-    {python.command.output} = resolve_command_for_output({python.command.detected})
-    写 [python]
-    写 selected = "conda"
-    写 command = {python.command.output}
-    写 version = {python.version.stdout_raw}
+**模板 B：`python.selected = "conda"`**
 
-  else if {python.selected} == "venv":
-    # 典型 detected_command 可能是 ".venv/bin/python" 或其绝对路径
-    执行 {python.version_probe = "{python.command.detected} --version"}
-    若失败则标记该语言 unavailable，并继续后续语言段写入
-    {python.command.output} = resolve_command_for_output({python.command.detected})
-    写 [python]
-    写 selected = "venv"
-    写 command = {python.command.output}
-    写 version = {python.version.stdout_raw}
+```text
+write_python_section_for_conda({python.command.detected}):
+  执行 {python.version_probe = "{python.command.detected} --version"}
+  若失败则标记该语言 unavailable，并继续后续语言段写入
+  {python.command.output} = resolve_command_for_output({python.command.detected})
+  写 [python]
+  写 selected = "conda"
+  写 command = {python.command.output}
+  写 version = {python.version.stdout_raw}
+```
 
-  else if {python.selected} == "python":
-    执行 {python.version_probe = "{python.command.detected} --version"}
-    若失败则标记该语言 unavailable，并继续后续语言段写入
-    {python.command.output} = resolve_command_for_output({python.command.detected})
-    写 [python]
-    写 selected = "python"
-    写 command = {python.command.output}
-    写 version = {python.version.stdout_raw}
+**模板 C：`python.selected = "venv"`**
 
-  else if {python.selected} == "python3":
-    执行 {python.version_probe = "{python.command.detected} --version"}
-    若失败则标记该语言 unavailable，并继续后续语言段写入
-    {python.command.output} = resolve_command_for_output({python.command.detected})
-    写 [python]
-    写 selected = "python3"
-    写 command = {python.command.output}
-    写 version = {python.version.stdout_raw}
+```text
+write_python_section_for_venv({python.command.detected}):
+  # 典型 detected_command 可能是 ".venv/bin/python" 或其绝对路径
+  执行 {python.version_probe = "{python.command.detected} --version"}
+  若失败则标记该语言 unavailable，并继续后续语言段写入
+  {python.command.output} = resolve_command_for_output({python.command.detected})
+  写 [python]
+  写 selected = "venv"
+  写 command = {python.command.output}
+  写 version = {python.version.stdout_raw}
+```
+
+**模板 D：`python.selected = "python"`**
+
+```text
+write_python_section_for_python({python.command.detected}):
+  执行 {python.version_probe = "{python.command.detected} --version"}
+  若失败则标记该语言 unavailable，并继续后续语言段写入
+  {python.command.output} = resolve_command_for_output({python.command.detected})
+  写 [python]
+  写 selected = "python"
+  写 command = {python.command.output}
+  写 version = {python.version.stdout_raw}
+```
+
+**模板 E：`python.selected = "python3"`**
+
+```text
+write_python_section_for_python3({python.command.detected}):
+  执行 {python.version_probe = "{python.command.detected} --version"}
+  若失败则标记该语言 unavailable，并继续后续语言段写入
+  {python.command.output} = resolve_command_for_output({python.command.detected})
+  写 [python]
+  写 selected = "python3"
+  写 command = {python.command.output}
+  写 version = {python.version.stdout_raw}
 ```
 
 强约束：
@@ -252,50 +274,70 @@ write_python_section_from_fact({python.selected}, {python.command.detected}):
 - 已选 `uv` 就只校验 `{python.command.detected}` 对应的 uv 入口，不再检查 `conda/python/python3/.venv/bin/python`。
 - 已选 `venv` 就只校验既定 venv 入口（哪怕是 `.venv/bin/python`），不再回退 `uv` 或系统 python。
 
-#### JavaScript 段模板
+#### JavaScript 段模板（按 selected 拆分，单模板单入口）
+
+使用规则（强制）：
+
+- 维护时先确定 `javascript.selected`，然后只使用对应的单一模板。
+- 禁止写成 `if/else if` 多分支运行时逻辑。
+
+**模板 A：`javascript.selected = "bun"`**
 
 ```text
-write_javascript_section_from_fact({javascript.selected}, {javascript.command.detected}):
-  if {javascript.selected} == "bun":
-    执行 {javascript.version_probe = "{javascript.command.detected} --version"}
-    若失败则标记该语言 unavailable，并继续后续语言段写入
-    {javascript.command.output} = resolve_command_for_output({javascript.command.detected})
-    写 [javascript]
-    写 selected = "bun"
-    写 command = {javascript.command.output}
-    写 version = {javascript.version.stdout_raw}
-
-  else if {javascript.selected} == "node":
-    执行 {javascript.version_probe = "{javascript.command.detected} --version"}
-    若失败则标记该语言 unavailable，并继续后续语言段写入
-    {javascript.command.output} = resolve_command_for_output({javascript.command.detected})
-    写 [javascript]
-    写 selected = "node"
-    写 command = {javascript.command.output}
-    写 version = {javascript.version.stdout_raw}
+write_javascript_section_for_bun({javascript.command.detected}):
+  执行 {javascript.version_probe = "{javascript.command.detected} --version"}
+  若失败则标记该语言 unavailable，并继续后续语言段写入
+  {javascript.command.output} = resolve_command_for_output({javascript.command.detected})
+  写 [javascript]
+  写 selected = "bun"
+  写 command = {javascript.command.output}
+  写 version = {javascript.version.stdout_raw}
 ```
 
-#### Shell 段模板
+**模板 B：`javascript.selected = "node"`**
 
 ```text
-write_shell_section_from_fact({shell.selected}, {shell.command.detected}):
-  if {shell.selected} == "bash":
-    执行 {shell.version_probe = "{shell.command.detected} --version"}
-    若失败则标记该语言 unavailable，并继续后续语言段写入
-    {shell.command.output} = resolve_command_for_output({shell.command.detected})
-    写 [shell]
-    写 selected = "bash"
-    写 command = {shell.command.output}
-    写 version = {shell.version.stdout_raw_or_first_line}
+write_javascript_section_for_node({javascript.command.detected}):
+  执行 {javascript.version_probe = "{javascript.command.detected} --version"}
+  若失败则标记该语言 unavailable，并继续后续语言段写入
+  {javascript.command.output} = resolve_command_for_output({javascript.command.detected})
+  写 [javascript]
+  写 selected = "node"
+  写 command = {javascript.command.output}
+  写 version = {javascript.version.stdout_raw}
+```
 
-  else if {shell.selected} == "zsh":
-    执行 {shell.version_probe = "{shell.command.detected} --version"}
-    若失败则标记该语言 unavailable，并继续后续语言段写入
-    {shell.command.output} = resolve_command_for_output({shell.command.detected})
-    写 [shell]
-    写 selected = "zsh"
-    写 command = {shell.command.output}
-    写 version = {shell.version.stdout_raw}
+#### Shell 段模板（按 selected 拆分，单模板单入口）
+
+使用规则（强制）：
+
+- 维护时先确定 `shell.selected`，然后只使用对应的单一模板。
+- 禁止写成 `if/else if` 多分支运行时逻辑。
+
+**模板 A：`shell.selected = "bash"`**
+
+```text
+write_shell_section_for_bash({shell.command.detected}):
+  执行 {shell.version_probe = "{shell.command.detected} --version"}
+  若失败则标记该语言 unavailable，并继续后续语言段写入
+  {shell.command.output} = resolve_command_for_output({shell.command.detected})
+  写 [shell]
+  写 selected = "bash"
+  写 command = {shell.command.output}
+  写 version = {shell.version.stdout_raw_or_first_line}
+```
+
+**模板 B：`shell.selected = "zsh"`**
+
+```text
+write_shell_section_for_zsh({shell.command.detected}):
+  执行 {shell.version_probe = "{shell.command.detected} --version"}
+  若失败则标记该语言 unavailable，并继续后续语言段写入
+  {shell.command.output} = resolve_command_for_output({shell.command.detected})
+  写 [shell]
+  写 selected = "zsh"
+  写 command = {shell.command.output}
+  写 version = {shell.version.stdout_raw}
 ```
 
 #### 补充语言模板
@@ -359,7 +401,7 @@ write_shell_env_vars({shell_env_json_object}):
 2. 用户明确要求初始化/重做 Go 环境
 3. 与用户正确核对了 Go 的版本且本技能支持此版本
 
-Go 对 check 输出行为的补充约束全部下沉至 reference，且仅在需进行 Go 语言环境 初始化/重做场景阅读：
+如果agent确认维护go 语言环境， agent **必须**阅读下面的文件以了解细节
 
 - `reference/go/GO_ENV_REFERENCE.md`
 - `reference/go/check-output/ENV_CHECK_OUTPUT_SPEC.md`
@@ -372,7 +414,7 @@ Go check 输出规范是对主规范的补充，不替代主规范。
 说明：本段是给“harness 初始化完成后、在该工作区内运行的业务 agent”使用的运行约束，不用于限制 `harness-init` agent 在维护本技能资产时的实现动作。
 
 
-必须维护以下段落（允许小幅文案差异，意思不变）：
+必须逐字维护以下段落（不允许改写、删改、同义替换）：
 
 ```markdown
 ### 会话启动一次性环境校验（每轮对话仅一次）
@@ -386,6 +428,15 @@ Go check 输出规范是对主规范的补充，不替代主规范。
 - 若缺失 `harness-agent-env` 管理，不允许agent修改这两个前置资产。不要求业务 agent 在会话中显式执行或显式说明其调用细节。
 - 不允许agent主动使用 bash 工具 调用 `scripts/shell_source.sh` 与 `scripts/shell_env.json` 资产 ，必须由agent运行时自动注入
 ```
+
+## 校验说明（强制）
+
+每次初始化或管理 `AGENTS.md` 后，必须执行以下校验并给出通过/不通过结论：
+
+1. `AGENTS.md` 中必须存在且仅存在一个标题为 `### 会话启动一次性环境校验（每轮对话仅一次）` 的段落。
+2. 该段落正文必须与“AGENTS.md 集成（固定段落）”中的 markdown 块逐字一致（含标点、空格、大小写与代码标记）。
+3. 若 AGENTS.md 其他位置出现与该段语义重复或冲突的环境启动说明，必须删除重复/冲突内容，仅保留该标题下的一处完整说明。
+4. 若任一项不通过，先修复 AGENTS.md 再进行后续流程。
 
 ## 输出结构（.tmp/env.json）
 
