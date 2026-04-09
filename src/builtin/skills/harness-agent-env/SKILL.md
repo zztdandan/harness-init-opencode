@@ -91,6 +91,7 @@ description: Initialize and continuously manage harness workspace runtime bootst
 - 仅兼容读取历史“简单 KV”旧格式；维护时必须写回正式 schema 结构，不再新产出旧格式
 - 在探测有 uv 环境时，设定 uv 相关环境变量（如 `UV_PROJECT_ENVIRONMENT`），设置为绝对路径
 - 在用户要求有某些二进制工具需要使用时，不在此json维护 PATH 相关变量，而是维护在 `shell_source.sh` 中的 PATH 拼接逻辑里。
+- Go 场景特别约束：仅维护 `session_env.json` 里的 `GOROOT/GOPATH/GOBIN` 还不足以切换默认 `go` 命令；必须在 `shell_source.sh` 中前置 `${GOROOT}/bin` 与 `${GOBIN}`，才能让 `go version` 与工具调用稳定命中目标版本。
 - 传统 python 虚拟环境（venv）不通过环境变量传递路径，而是通过 `check-agent-env.sh` 输出的 `python.command` 字段传递可调用命令路径。
 
 
@@ -103,6 +104,21 @@ description: Initialize and continuously manage harness workspace runtime bootst
 3. 保持可重复 source 的幂等性
 4. 不承担探测报告输出职责
 5. 该脚本**不得**承担对`scripts/session_env.json` 的解析和 export 工作，而将这个工作交由 agent 的自动化 hook 完成
+6. Go 场景下应优先保障 PATH 解析顺序：当环境中已有 `GOROOT/GOBIN` 时，前置 `${GOROOT}/bin` 与 `${GOBIN}`（带存在性判断）
+
+Go PATH 最小样例：
+
+```bash
+_append_path_once() {
+  case ":$PATH:" in
+    *":$1:"*) ;;
+    *) PATH="$1:$PATH" ;;
+  esac
+}
+
+[ -n "${GOBIN:-}" ] && [ -d "${GOBIN}" ] && _append_path_once "${GOBIN}"
+[ -n "${GOROOT:-}" ] && [ -x "${GOROOT}/bin/go" ] && _append_path_once "${GOROOT}/bin"
+```
 
 ## check-agent-env 约定与编写指南
 

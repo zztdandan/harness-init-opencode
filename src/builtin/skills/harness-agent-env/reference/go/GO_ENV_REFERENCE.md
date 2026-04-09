@@ -24,17 +24,40 @@ Go 启用时，`check-agent-env.sh` 的输出补充要求见：
    - 优先使用用户给出的内容
    - 若用户不给出，则按照下文的默认路径探测
    - 若默认路径下探测结果不存在或不符合版本，则按照环境发现流程探测
-3. 在探测好所有环境后，增补 `scripts/session_env.json`：维护 bash 工具自动注入的go运行环境变量键值，包含所有关键 go env 环境变量（go语言的所有环境均可通过环境变量设置，故仅需维护这个文件即可注入所有探测到的go环境）
-3. 使用参考脚本中的工具相关脚本，检测及补充 go 工具的安装（工具安装前需临时设置好所有环境，根据上个步骤的最后探测结果）
-4. 若没有特殊要求，跳过增补维护`scripts/shell_source.sh`：go的几乎所有参数均通过环境变量配置，若用户没有特殊要求，这个脚本没有 go相关配置需要维护
-5. `scripts/check-agent-env.sh`：根据 `check-output/ENV_CHECK_OUTPUT_SPEC.md` 的规范编写探测脚本，输出 Go 环境的探测结果
+3. 在探测好所有环境后，增补 `scripts/session_env.json`：维护 bash 工具自动注入的 Go 运行环境变量键值，包含关键 Go env 环境变量。
+4. 维护 `scripts/shell_source.sh` 的 PATH 前置逻辑：当 `GOROOT/GOBIN` 已注入时，将 `${GOROOT}/bin` 与 `${GOBIN}` 前置到 PATH（保持幂等）。
+   - 原因：仅注入 `GOROOT` 等环境变量不能改变 shell 对 `go` 命令的默认解析顺序；`go` 的实际命中版本取决于 PATH。
+   - 要求：`shell_source.sh` 不解析 `session_env.json`，只消费已注入的环境变量。
+5. 使用参考脚本中的工具相关脚本，检测及补充 go 工具的安装（工具安装前需临时设置好所有环境，根据上个步骤的最后探测结果）
+6. `scripts/check-agent-env.sh`：根据 `check-output/ENV_CHECK_OUTPUT_SPEC.md` 的规范编写探测脚本，输出 Go 环境的探测结果
    - 在编写/维护脚本阶段，必须先探索并固化两个目录：
      - `GOBIN`（如 `${GOPATH}/bin`）
      - `GOTOOLDIR`（通常 `${GOROOT}/pkg/tool/${GOOS}_${GOARCH}`）
    - 基于上述目录生成“Go 工具清单 + 探测方式”到脚本内（或等价的静态配置），会话运行时只执行清单里的探测语句，不再重新枚举目录。
    - 输出至少包括每个工具的 `command` 与 `version`；不支持版本输出的工具使用 `probe=exists` 并按补充输出规范格式化。
-6. 在 harness 工作区的 AGENTS.md 中，无需为 go语言维护额外文字及段落，遵从主规范的维护即可
-7. 由于主流程中已经存在 运行`scripts/check-agent-env.sh`的相关流程，go环境维护仅需确认额外的go环境结果是否正确即可
+7. 在 harness 工作区的 AGENTS.md 中，无需为 go语言维护额外文字及段落，遵从主规范的维护即可
+8. 由于主流程中已经存在 运行`scripts/check-agent-env.sh`的相关流程，go环境维护仅需确认额外的go环境结果是否正确即可
+
+## Go PATH 注入样例（关键）
+
+当会话已通过 hook 注入 `GOROOT` 与 `GOBIN` 后，`scripts/shell_source.sh` 推荐最小实现如下：
+
+```bash
+_append_path_once() {
+  case ":$PATH:" in
+    *":$1:"*) ;;
+    *) PATH="$1:$PATH" ;;
+  esac
+}
+
+[ -n "${GOBIN:-}" ] && [ -d "${GOBIN}" ] && _append_path_once "${GOBIN}"
+[ -n "${GOROOT:-}" ] && [ -x "${GOROOT}/bin/go" ] && _append_path_once "${GOROOT}/bin"
+```
+
+说明：
+
+- 这段逻辑只负责命令解析顺序（PATH），不负责导出 `GOROOT/GOPATH/GOBIN`。
+- 若未做 PATH 前置，即使 `GOROOT` 指向 go1.26，`go version` 仍可能命中旧版本（例如 `~/.local/bin/go`）。
 
 
 ## 环境发现流程（用户不指定，默认设定探测不到）
