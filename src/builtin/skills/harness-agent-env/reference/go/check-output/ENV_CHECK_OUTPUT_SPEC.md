@@ -28,9 +28,9 @@ Go 启用时必须包含：
 [go]
 enabled = true
 command = "go"
-version = "go1.24.1"
+version = "go1.24.10"
 gobin = "/home/base/repo/go124_mod/bin"
-gotooldir = "/home/base/.gvm/gos/go1.24.1/pkg/tool/linux_amd64"
+gotooldir = "/home/base/.gvm/gos/go1.24.10/pkg/tool/linux_amd64"
 
 [go.tools.gopls]
 source = "gobin"
@@ -46,7 +46,7 @@ version = "golangci-lint has version v1.64.8"
 
 [go.tools.compile]
 source = "gotooldir"
-command = "/home/base/.gvm/gos/go1.24.1/pkg/tool/linux_amd64/compile"
+command = "/home/base/.gvm/gos/go1.24.10/pkg/tool/linux_amd64/compile"
 probe = "exists"
 version = "exists"
 

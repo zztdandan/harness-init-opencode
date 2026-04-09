@@ -29,7 +29,7 @@ resolve_goroot() {
   if [[ "${version}" == "120" ]]; then
     default_goroot="/home/base/.gvm/gos/go1.20.14"
   elif [[ "${version}" == "124" ]]; then
-    default_goroot="/home/base/.gvm/gos/go1.24.1"
+    default_goroot="/home/base/.gvm/gos/go1.24.10"
   fi
 
   if [[ -n "${default_goroot}" && -x "${default_goroot}/bin/go" ]]; then

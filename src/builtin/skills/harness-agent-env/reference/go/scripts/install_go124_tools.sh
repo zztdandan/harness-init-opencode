@@ -24,7 +24,7 @@ setup_go_env_common "${GOROOT_RESOLVED}" "${GOPATH_RESOLVED}" "${GOBIN_RESOLVED}
 GO_BIN="${GOROOT_RESOLVED}/bin/go"
 TOOLS_DIR="${GOBIN_RESOLVED}"
 
-# Go 1.24.1-compatible pinned versions.
+# Go 1.24.10-compatible pinned versions.
 # Note: gopls >= v0.19.0 requires go >= 1.24.2.
 GOPLS_VERSION="v0.18.1"
 GOIMPORTS_VERSION="v0.31.0"

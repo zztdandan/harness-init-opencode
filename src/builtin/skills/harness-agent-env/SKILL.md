@@ -1,6 +1,6 @@
 ---
 name: harness-agent-env
-description: Initialize and continuously manage harness workspace runtime bootstrap assets. Use this skill whenever user mentions agent environment/runtime setup, session bootstrap, check-agent-env.sh, shell_source.sh, session_env.json, AGENTS.md session start checks, uv/venv/python, bun/node, bash/zsh selection, or Go 1.20/1.24 environment prep.
+description: Initialize and continuously manage harness workspace runtime bootstrap assets. Use this skill whenever user mentions agent environment/runtime setup, session bootstrap, check-agent-env.sh, shell_source.sh, session_env.json, AGENTS.md session start checks, uv/venv/python, bun/node, bash/zsh selection, or Go 1.20/1.24/1.26 environment prep.
 ---
 
 # harness-agent-env
