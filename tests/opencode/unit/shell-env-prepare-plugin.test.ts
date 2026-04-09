@@ -97,6 +97,30 @@ describe("loadSessionEnvCache", () => {
       })
     })
   })
+
+  test("supports legacy flat KV session_env format", async () => {
+    await withTempWorkspace(async (workspace) => {
+      const scriptsDir = path.join(workspace, "scripts")
+      await mkdir(scriptsDir, { recursive: true })
+      await writeFile(
+        path.join(scriptsDir, "session_env.json"),
+        JSON.stringify({
+          GOPATH: "/tmp/go",
+          GOMODCACHE: "/tmp/go/pkg/mod",
+          COUNT: 12,
+          "BAD-NAME": "skip",
+        }),
+        "utf8",
+      )
+
+      const cache = await loadSessionEnvCache({ worktreeRoot: workspace })
+      expect(cache).toEqual({
+        GOPATH: "/tmp/go",
+        GOMODCACHE: "/tmp/go/pkg/mod",
+        COUNT: "12",
+      })
+    })
+  })
 })
 
 describe("harness shell env prepare plugin", () => {

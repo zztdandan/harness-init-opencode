@@ -83,6 +83,13 @@ export async function loadSessionEnvCache(
 
   const payload = parsed as SessionEnvPayload
 
+  // Backward compatible with legacy flat KV format:
+  // { "KEY": "value" }
+  // Preferred format remains: { schema: "harness-shell-env/v1", env: { ... } }
+  if (typeof payload.schema === "undefined" && typeof payload.env === "undefined") {
+    return sanitizeEnv(parsed)
+  }
+
   if (payload.schema !== SESSION_ENV_SCHEMA) {
     return {}
   }

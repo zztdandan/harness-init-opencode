@@ -72,18 +72,23 @@ description: Initialize and continuously manage harness workspace runtime bootst
 固定职责：
 
 1. 只维护“bash 工具自动注入”的环境变量映射
-2. 键为环境变量名，值为字符串
+2. 使用结构化 schema 包装环境变量映射
 3. 与 `check-agent-env.sh` 输出中的 `session_env` 段保持一致
 4. 禁止混入探测日志、说明文本、注释字段
 
 额外编写与维护规范：
-- json形式为简单KV，即
+- JSON 正式结构固定为：
 ```json
 {
-  "VAR_NAME": "value",
-  "PATH_EXTRA": "/opt/custom/bin"
+  "schema": "harness-shell-env/v1",
+  "env": {
+    "VAR_NAME": "value",
+    "PATH_EXTRA": "/opt/custom/bin"
+  }
 }
 ```
+- `env` 中键为环境变量名，值写字符串（数值/布尔若出现需转字符串）
+- 仅兼容读取历史“简单 KV”旧格式；维护时必须写回正式 schema 结构，不再新产出旧格式
 - 在探测有 uv 环境时，设定 uv 相关环境变量（如 `UV_PROJECT_ENVIRONMENT`），设置为绝对路径
 - 在用户要求有某些二进制工具需要使用时，不在此json维护 PATH 相关变量，而是维护在 `shell_source.sh` 中的 PATH 拼接逻辑里。
 - 传统 python 虚拟环境（venv）不通过环境变量传递路径，而是通过 `check-agent-env.sh` 输出的 `python.command` 字段传递可调用命令路径。
@@ -134,7 +139,7 @@ description: Initialize and continuously manage harness workspace runtime bootst
 ```text
 main:
   读取 {workspace}/scripts/session_env.json
-  若缺失 / 不可读 / 非简单 KV JSON:
+  若缺失 / 不可读 / 非法 JSON / schema 无法识别:
     stderr: "session_env.json invalid"
     exit 1
 
