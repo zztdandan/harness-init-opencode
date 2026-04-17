@@ -1,6 +1,6 @@
 # dedge-harness-init-guide
 
-面向 **OpenCode** 的 harness 初始化与会话环境准备插件集合。项目当前提供两个插件：
+面向 **OpenCode** 的 harness 初始化与会话环境准备插件集合。项目提供两个插件：
 
 - `harness_init.js`：注入 `harness-init` 主 agent 与内置 skills。
 - `harness_shell_env_prepare_plugin.js`：在会话内准备 shell 前置环境（`session_env.json` + `shell_source.sh`）。
@@ -8,9 +8,8 @@
 ## Two Plugins
 
 ### 1) harness-init-plugin（`dist/harness_init.js`）
-功能：
-- 提供一个即插即用的 harness 工作目录管理全套功能，包括一个 agent 和3个技能。提供一套完整可扩展的的 harness 维护框架
 
+提供即插即用的 harness 工作目录管理功能，包括一个 agent 和三个技能，构建了一套完整可扩展的 harness 维护框架。
 
 职责：
 
@@ -18,21 +17,23 @@
 - 注入内置 skills 路径（`dist/builtin/skills`）
 - 默认注入 skill 权限：`harness-agent-env`、`harness-git-worktree`、`harness-docs`
 - 默认不抢占用户会话，不会把 `harness-init` 设为全局默认 agent
-- 本插件的设计哲学是，在插件进行过初始化后仅留下AGNETS.md，内含完善的
+- 初始化完成后仅保留 AGENTS.md，内含完善的使用指引
 
 ### 2) harness_shell_env_prepare_plugin（`dist/harness_shell_env_prepare_plugin.js`）
 
+在会话启动时准备 shell 前置环境，确保命令执行时拥有正确的环境变量。
+
 职责：
 
-- 在会话内一次性读取 `scripts/session_env.json`（要求 `schema = "harness-shell-env/v1"`）并缓存为 env
-- 通过 `shell.env` hook 将缓存 env 注入 shell 执行环境
+- 在会话内一次性读取 `scripts/session_env.json`（要求 `schema = "harness-shell-env/v1"`）并缓存为环境变量
+- 通过 `shell.env` hook 将缓存的环境变量注入 shell 执行环境
 - 若存在 `scripts/shell_source.sh`，注入 `BASH_ENV`，让 bash 在非交互执行时自动加载该脚本
 - 为 zsh 生成补救 shim：`scripts/.harness-zdotdir/.zshenv`，并注入 `ZDOTDIR` 指向该目录
 
 关键语义：
 
-- `session_env.json` 是会话级缓存快照（同会话内文件变更不会自动刷新）
-- `shell_source.sh` 存在才会注入 `BASH_ENV` / `ZDOTDIR`；不存在时仅注入 `session_env.json` 中的 env
+- `session_env.json` 是会话级缓存快照，同会话内文件变更不会自动刷新
+- `shell_source.sh` 存在才会注入 `BASH_ENV` / `ZDOTDIR`；不存在时仅注入 `session_env.json` 中的环境变量
 - `shell_source.sh` 在 bash 非交互启动阶段自动加载；脚本返回非 0 也不会阻断命令执行
 - zsh 通过 shim 中的 `|| true` 保证 source 失败不阻断后续命令
 
@@ -83,14 +84,14 @@ bun run build
 
 ## Plugin Constraints
 
-以下限制来自当前 agent/skill 与插件实现事实：
+以下限制来自当前 agent/skill 与插件实现：
 
 - `harness-init-plugin` 只负责注入 agent/skills，不注入自定义 tool。
 - `harness_shell_env_prepare_plugin` 不再改写工具命令，统一通过 `shell.env` 注入环境变量。
 - `session_env.json` 必须是对象结构，且满足 schema：`harness-shell-env/v1`；非法键会被过滤。
 - 环境变量键名仅接受：`[A-Za-z_][A-Za-z0-9_]*`。
 - zsh 兼容依赖插件在 `scripts/.harness-zdotdir/.zshenv` 成功落盘；若写入失败，将只保留 `BASH_ENV` 注入。
-- `harness-agent-env` / `harness-docs` / `AGENTS.template` 已统一收敛为 `scripts/session_env.json` 语义，不再使用 `scripts/shell_env.json` 命名。
+- `harness-agent-env`、`harness-docs`、`AGENTS.template` 已统一收敛为 `scripts/session_env.json` 语义，不再使用 `scripts/shell_env.json` 命名。
 - `harness-init` 设计中包含 Gate A/Gate B 门禁与文档/拓扑治理流程，不适合在未确认主管理项目目录时强行执行。
 
 ## Version 0.1.1
@@ -117,13 +118,13 @@ bun run build
   - 新增 `BASH_ENV` 自动加载 `scripts/shell_source.sh`
   - 新增 zsh 补救注入（`ZDOTDIR` + `.zshenv` shim）
 
-- `0.2.0`（计划）
+- `0.2.0`（计划中）
   - 增强环境资产 schema 校验与错误可观测性
   - 提供更细粒度的前置策略（按目录/命令模式）
   - 输出更完整的运行诊断信息（便于排障）
 
 - 未来计划
-  - 与 `harness-agent-env` / `harness-docs` 做规范统一与自动迁移
+  - 与 `harness-agent-env`、`harness-docs` 做规范统一与自动迁移
   - 探索可选的会话缓存刷新机制（在不破坏稳定性的前提下）
   - 持续补齐发布节奏下的版本化文档与升级指南
 
