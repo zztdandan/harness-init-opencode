@@ -44,6 +44,15 @@ description: Initialize and manage AGENTS.md and harness documentation system wi
    - 已有有价值注释不得随意删除
 9. 必须包含 `Project Tree & Task Status` 章节，并作为权威状态源维护。
 10. 若模板与历史生成结果冲突，优先执行模板；遇到历史遗留章节（如拆分成两个独立 git 章节、重复环境说明）时，按模板合并并清理重复段落。
+11. 当且仅当用户明确声明“该项目是 agent 插件项目”时，必须审核并同步 `docs/guide/` 下以下两个文档（目标文件名必须一致）：
+   - `OPENCODE_PLUGIN_DEVELOPMENT_GUIDE.md`
+   - `OPENCODE_PLUGIN_DEVELOPMENT_REFERENCE_EXAMPLES.md`
+   处理规则：
+   - 参考源固定为本技能内置 reference：
+     - `src/builtin/skills/harness-docs/reference/opencode/OPENCODE_PLUGIN_DEVELOPMENT_GUIDE.md`
+     - `src/builtin/skills/harness-docs/reference/opencode/OPENCODE_PLUGIN_DEVELOPMENT_REFERENCE_EXAMPLES.md`
+   - 若 `docs/guide/` 中目标文件不存在：必须从上述 reference 原样拷贝生成；
+   - 若已存在：必须校验内容与 reference 完全一致，不一致时以 reference 全量覆盖，确保字节级一致（不做改写、摘录或重排）。
 
 ## 校验说明（强制）
 
@@ -68,11 +77,16 @@ description: Initialize and manage AGENTS.md and harness documentation system wi
    - P0（权威事实）：根目录 `AGENTS.md`现状、`scripts/check-agent-env.sh`、`scripts/shell_source.sh`、`scripts/session_env.json`、当前仓库 git 结构
    - P1（参考章节）：模板文件 `src/builtin/templates/AGENTS.template.md | dist/builtin/templates/AGENTS.template.md` （若可见）
    - P2（历史初始化输入）：`.tmp/doc-input.json`（仅在存在时参考，不作为硬依赖）
+8. 当且仅当用户明确声明“该项目是 agent 插件项目”时，管理阶段需持续治理 `docs/guide/` 中以下文件与 reference 的一致性（每次初始化/维护都要检查）：
+   - `docs/guide/OPENCODE_PLUGIN_DEVELOPMENT_GUIDE.md` ↔ `src/builtin/skills/harness-docs/reference/opencode/OPENCODE_PLUGIN_DEVELOPMENT_GUIDE.md`
+   - `docs/guide/OPENCODE_PLUGIN_DEVELOPMENT_REFERENCE_EXAMPLES.md` ↔ `src/builtin/skills/harness-docs/reference/opencode/OPENCODE_PLUGIN_DEVELOPMENT_REFERENCE_EXAMPLES.md`
+   缺失则原样补齐；存在但不一致则以 reference 原样覆盖，保持完全一致。
 
 ## 输入与输出
 
 - 输入（初始化）：`.tmp/doc-input.json` + `src/builtin/templates/AGENTS.template.md | dist/builtin/templates/AGENTS.template.md`
 - 输入（管理）：根目录 `AGENTS.md`（必读）+ `scripts/check-agent-env.sh` + `scripts/shell_source.sh` + `scripts/session_env.json` + 当前仓库 git tree 事实 + `src/builtin/templates/AGENTS.template.md | dist/builtin/templates/AGENTS.template.md` 供结构性参考；`.tmp/` 仅在存在时参考
+- 输入（agent 插件项目声明场景）：`src/builtin/skills/harness-docs/reference/opencode/OPENCODE_PLUGIN_DEVELOPMENT_GUIDE.md`、`src/builtin/skills/harness-docs/reference/opencode/OPENCODE_PLUGIN_DEVELOPMENT_REFERENCE_EXAMPLES.md`（作为 `docs/guide/` 对应文件的唯一基准源）
 - 输出：根目录 `AGENTS.md`
 
 注意：模板仅提供结构提示，不提供渲染脚本，最终文本由 agent 按现场上下文直接撰写。
